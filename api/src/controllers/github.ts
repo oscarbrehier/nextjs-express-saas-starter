@@ -1,0 +1,56 @@
+import { Response, NextFunction } from "express";
+import { AuthedRequest } from "../types";
+import { supabaseAdmin } from "../services/supabase";
+import * as githubService from "../services/github";
+
+/** Determine whether the caller has an active Pro subscription. */
+async function getSubscriptionStatus(userId: string): Promise<boolean> {
+  const { data } = await supabaseAdmin
+    .from("profiles")
+    .select("subscription_status")
+    .eq("id", userId)
+    .single();
+  return data?.subscription_status === "active";
+}
+
+/**
+ * GET /api/github/:username/stats
+ *
+ * Returns aggregated stats for a GitHub user. Free-tier callers get a
+ * truncated view (fewer repos, no language breakdown detail).
+ */
+export async function getUserStats(
+  req: AuthedRequest,
+  res: Response,
+  next: NextFunction
+): Promise<void> {
+  try {
+    const { username } = req.params;
+    const isPro = await getSubscriptionStatus(req.user.sub);
+    const stats = await githubService.getUserStats(username, isPro);
+    res.json({ data: stats, tier: isPro ? "pro" : "free" });
+  } catch (err) {
+    next(err);
+  }
+}
+
+/**
+ * GET /api/repos/:owner/:repo/insights
+ *
+ * Returns detailed insights for a single repository.
+ * Requires a Pro subscription (enforced here to return the tier hint).
+ */
+export async function getRepoInsights(
+  req: AuthedRequest,
+  res: Response,
+  next: NextFunction
+): Promise<void> {
+  try {
+    const { owner, repo } = req.params;
+    const isPro = await getSubscriptionStatus(req.user.sub);
+    const insights = await githubService.getRepoInsights(owner, repo);
+    res.json({ data: insights, tier: isPro ? "pro" : "free" });
+  } catch (err) {
+    next(err);
+  }
+}
