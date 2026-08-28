@@ -1,0 +1,110 @@
+{
+  "schemaVersion": 2,
+  "generatedAt": "2026-08-28T00:00:00.000Z",
+  "title": "Design System: GitHub Insights",
+  "extensions": {
+    "colorMeta": {
+      "stamp-red": { "role": "primary", "displayName": "Stamp Red", "canonical": "#b3241d", "darkCanonical": "#cb3a2e", "tonalRamp": ["#3a0c09", "#5c130f", "#7e1a14", "#b3241d", "#c74a3f", "#d97165", "#eba59c", "#f8d6d1"] },
+      "stamp-red-pressed": { "role": "primary-hover", "displayName": "Stamp Red — Pressed", "canonical": "#8f1b16", "darkCanonical": "#e1493c" },
+      "paper": { "role": "neutral-bg", "displayName": "Ledger Paper", "canonical": "#f5f6f2", "darkCanonical": "#0d0f10" },
+      "report-sheet": { "role": "neutral-surface", "displayName": "Report Sheet White", "canonical": "#ffffff", "darkCanonical": "#16191b" },
+      "ink": { "role": "neutral-text", "displayName": "Near-Black Ink", "canonical": "#14181b", "darkCanonical": "#ecefec" },
+      "ink-muted": { "role": "neutral-text-secondary", "displayName": "Muted Slate", "canonical": "#5b6469", "darkCanonical": "#9aa3a0" },
+      "hairline": { "role": "neutral-border", "displayName": "Hairline Rule", "canonical": "#d9dcd6", "darkCanonical": "#2a2f30" },
+      "verified-green": { "role": "success", "displayName": "Verified Green", "canonical": "#2f6b4f", "darkCanonical": "#5cb68b" },
+      "verified-green-tint": { "role": "success-bg", "displayName": "Verified Green — Tint", "canonical": "#e7f0ea", "darkCanonical": "#12241c" }
+    },
+    "typographyMeta": {
+      "body": { "displayName": "Body", "purpose": "Prose, descriptions, message-box text." },
+      "title": { "displayName": "Title", "purpose": "ReportCard headers, page h1s, auth masthead." },
+      "label": { "displayName": "Label", "purpose": "Field labels — tracked uppercase, 11px." },
+      "micro": { "displayName": "Micro", "purpose": "The smallest tracked-caps step: taglines, dt stat labels, badges, HealthBadge's stage word, AuthFrame's edge label — 10px." },
+      "data": { "displayName": "Data", "purpose": "Every measured figure: scores, counts, percentages, HealthBadge's score, form input text." }
+    },
+    "shadows": [
+      { "name": "sheet-lift", "value": "0 1px 2px rgba(0,0,0,0.05)", "purpose": "The only shadow in the system — applied to ReportCard and the auth card so they read as a sheet resting on the desk." }
+    ],
+    "motion": [
+      { "name": "ease-standard", "value": "cubic-bezier(0.4, 0, 0.2, 1)", "purpose": "Color/border transitions (hover, focus, active nav)." },
+      { "name": "measure-fill", "value": "700ms ease-out", "purpose": "MeasuredValue fill-bar transitions." }
+    ],
+    "breakpoints": [
+      { "name": "md", "value": "768px" }
+    ]
+  },
+  "components": [
+    {
+      "name": "Primary Button",
+      "kind": "button",
+      "refersTo": "button-primary",
+      "description": "The single primary action per screen (Sign in, Run, Upgrade to Pro).",
+      "html": "<button class=\"ds-btn-primary\">SIGN IN</button>",
+      "css": ".ds-btn-primary { background: #b3241d; color: #ffffff; padding: 10px 16px; font-family: 'Public Sans', ui-sans-serif, system-ui, sans-serif; font-size: 11px; font-weight: 600; letter-spacing: 0.08em; text-transform: uppercase; border: none; border-radius: 0; cursor: pointer; transition: background 0.2s cubic-bezier(0.4,0,0.2,1); } .ds-btn-primary:hover { background: #8f1b16; } .ds-btn-primary:focus-visible { outline: 2px solid #b3241d; outline-offset: 2px; } .ds-btn-primary:disabled { opacity: 0.5; cursor: default; }"
+    },
+    {
+      "name": "Report Card",
+      "kind": "card",
+      "refersTo": "card-report",
+      "description": "The system's one container: a ruled header (title + monospace meta) over a body, used for every data-bearing surface.",
+      "html": "<article class=\"ds-report-card\"><header class=\"ds-report-card-header\"><h3>octoscope</h3><span>TypeScript</span></header><div class=\"ds-report-card-body\">A weighted repo-health scoring engine.</div></article>",
+      "css": ".ds-report-card { border: 1px solid #d9dcd6; background: #ffffff; border-radius: 3px; box-shadow: 0 1px 2px rgba(0,0,0,0.05); font-family: 'Public Sans', ui-sans-serif, system-ui, sans-serif; } .ds-report-card-header { display: flex; justify-content: space-between; align-items: baseline; gap: 16px; border-bottom: 1px solid #d9dcd6; padding: 14px 20px; } .ds-report-card-header h3 { margin: 0; font-size: 14px; font-weight: 600; color: #14181b; } .ds-report-card-header span { font-family: 'Courier Prime', ui-monospace, monospace; font-size: 11px; color: #5b6469; } .ds-report-card-body { padding: 16px 20px; font-size: 14px; color: #5b6469; }"
+    },
+    {
+      "name": "Intake Field",
+      "kind": "input",
+      "refersTo": "input-field",
+      "description": "An underlined blank rather than a bordered box — reads as a form field to fill in.",
+      "html": "<label class=\"ds-field\"><span>Email</span><input type=\"email\" placeholder=\"you@example.com\" /></label>",
+      "css": ".ds-field { display: block; font-family: 'Public Sans', ui-sans-serif, system-ui, sans-serif; } .ds-field span { display: block; margin-bottom: 6px; font-size: 11px; font-weight: 600; letter-spacing: 0.1em; text-transform: uppercase; color: #5b6469; } .ds-field input { width: 100%; border: none; border-bottom: 1px solid #d9dcd6; background: transparent; padding: 8px 0; font-family: 'Courier Prime', ui-monospace, monospace; font-size: 14px; color: #14181b; } .ds-field input::placeholder { color: #5b6469; } .ds-field input:focus { outline: none; border-bottom-color: #b3241d; } .ds-field input:focus-visible { outline: 2px solid #b3241d; outline-offset: 2px; }"
+    },
+    {
+      "name": "Health Badge",
+      "kind": "custom",
+      "refersTo": "health-badge",
+      "description": "The total health score: a plain bordered square holding the score and a neutral stage word. Always ink — a reading, not a verdict.",
+      "html": "<div class=\"ds-health-badge\"><span class=\"ds-health-score\">92</span><span class=\"ds-health-stage\">MATURE</span></div>",
+      "css": ".ds-health-badge { width: 96px; height: 96px; border: 1px solid #d9dcd6; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 4px; } .ds-health-score { font-family: 'Courier Prime', ui-monospace, monospace; font-weight: 700; font-size: 24px; color: #14181b; line-height: 1; } .ds-health-stage { font-family: 'Public Sans', ui-sans-serif, system-ui, sans-serif; font-size: 10px; font-weight: 600; letter-spacing: 0.06em; text-transform: uppercase; color: #5b6469; }"
+    },
+    {
+      "name": "Measured Value",
+      "kind": "custom",
+      "refersTo": "measured-value",
+      "description": "One reference-range row: label, bracket with a fill-to-reading bar and a tick, value/max in tabular figures. Always ink-muted/ink — never colored by whether the reading is high or low.",
+      "html": "<div class=\"ds-measured\"><span class=\"ds-measured-label\">Commit regularity</span><div class=\"ds-measured-track\"><span class=\"ds-measured-fill\" style=\"width:93%\"></span></div><span class=\"ds-measured-value\">28/30</span></div>",
+      "css": ".ds-measured { display: flex; align-items: center; gap: 12px; font-family: 'Public Sans', ui-sans-serif, system-ui, sans-serif; } .ds-measured-label { width: 144px; flex-shrink: 0; font-size: 13px; color: #5b6469; } .ds-measured-track { position: relative; flex: 1; height: 16px; border-left: 1px solid #d9dcd6; border-right: 1px solid #d9dcd6; } .ds-measured-track::before { content: ''; position: absolute; left: 0; right: 0; top: 50%; height: 1px; background: #d9dcd6; transform: translateY(-50%); } .ds-measured-fill { position: absolute; top: 50%; left: 0; height: 4px; background: rgba(91,100,105,0.6); transform: translateY(-50%); } .ds-measured-value { width: 48px; flex-shrink: 0; text-align: right; font-family: 'Courier Prime', ui-monospace, monospace; font-size: 13px; color: #14181b; }"
+    }
+  ],
+  "narrative": {
+    "northStar": "The Lab Report",
+    "overview": "GitHub Insights reads a profile the way a clinic reads a patient: identity first, then a panel of measured values against stated reference ranges, then a plain total reading. The system rejects the category default — indigo buttons, rounded card grids, a soft-shadowed dashboard — in favor of a printed-document register: hairline rules instead of shadows, tabular monospace figures instead of decorative stat tiles. Nothing here is soft. Corners are near-sharp, borders are 1px, and color is rationed to one accent, used only where the visitor is meant to act — never to grade a reading as good or bad.\n\nTwo registers exist by design: a light 'paper' mode (a report sheet on a lit desk) and a dark 'negative' mode (the same report read on a light table in a dark room) — dark mode is not an inverted tint of light mode, it swaps to its own near-black ground and lifted-surface pairing.",
+    "keyCharacteristics": [
+      "Paper-and-ink palette: one accent (stamp red), reserved for actions — never for grading a reading.",
+      "Every number is a measurement: tabular monospace figures throughout.",
+      "Depth comes from hairline rules and 1px borders, not shadows.",
+      "The total health score is a plain bordered readout (HealthBadge) — a measurement alongside the others, not a verdict."
+    ],
+    "rules": [
+      { "name": "The Rationed Ink Rule", "body": "Stamp Red is the only saturated color in the system, and it marks an action or a locked state — never a reading. It never becomes a background fill larger than a button; everywhere else it appears as text or a 1px rule.", "section": "colors" },
+      { "name": "The Ungraded Reading Rule", "body": "A measured value's color never depends on whether the number is high or low. MeasuredValue's fill and tick are always ink-muted/ink; HealthBadge's score and stage word are always ink. A low reading is a fact the report states, not a fault it flags.", "section": "colors" },
+      { "name": "The Negative Register Rule", "body": "Dark mode is a second ground truth, not an inverted light theme: ground and surface are independently defined near-black values, and the accent shifts brighter to stay legible against them.", "section": "colors" },
+      { "name": "The Instrument-Numeral Rule", "body": "Any number a visitor might compare against another number renders in Courier Prime with tabular figures.", "section": "typography" },
+      { "name": "The Paper-Not-Shadow Rule", "body": "Depth is a hairline border plus a 1px shadow at most. A card, panel, or overlay that needs more separation gets a rule between it and its neighbor, never a heavier shadow.", "section": "elevation" },
+      { "name": "The All-Rectilinear Rule", "body": "Nothing in the system is circular. An earlier version stamped the total score in a rotated circular ring; that read as a verdict rather than a measurement and was replaced with a plain bordered square (HealthBadge) at the same visual weight.", "section": "shapes" }
+    ],
+    "dos": [
+      "Do render every measured figure in Courier Prime with tabular figures.",
+      "Do keep Stamp Red rationed to actions and locked-content markers; never a large background fill and never a grade on a reading.",
+      "Do use a 1px hairline rule for separation and state; a colored border above 1px is a violation.",
+      "Do give dark mode its own near-black ground and lifted surface, not an inverted light palette.",
+      "Do show locked/gated content as a sealed or redacted document, never a generic blur-plus-CTA."
+    ],
+    "donts": [
+      "Don't use rounded-full or soft rounded-xl/2xl cards — the system's one radius is 3px, reserved for ReportCard.",
+      "Don't use a unicode glyph as an icon.",
+      "Don't add a kicker or eyebrow label above a heading.",
+      "Don't color a measured value or the total score by whether it's high or low.",
+      "Don't frame the total score as a verdict (a stamp, a pass/fail badge, a colored ring) — it is a plain reading.",
+      "Don't reduce ink-muted with an opacity modifier for placeholder or secondary text."
+    ]
+  }
+}

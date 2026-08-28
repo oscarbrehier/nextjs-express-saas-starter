@@ -2,6 +2,7 @@
 
 import { useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
+import { ThemeToggle } from "@/components/ui/ThemeToggle";
 
 interface TopbarProps {
   email: string;
@@ -18,11 +19,12 @@ export function Topbar({ email }: TopbarProps) {
   }
 
   return (
-    <header className="h-14 shrink-0 border-b border-gray-200 bg-white flex items-center justify-end px-6 gap-4">
-      <span className="text-sm text-gray-600">{email}</span>
+    <header className="flex h-14 shrink-0 items-center justify-end gap-4 border-b border-rule bg-surface px-6">
+      <ThemeToggle />
+      <span className="font-mono text-xs text-ink-muted">{email}</span>
       <button
         onClick={handleLogout}
-        className="text-sm text-gray-500 hover:text-gray-900 transition-colors"
+        className="border border-rule px-2.5 py-1 text-[11px] font-semibold uppercase tracking-[0.1em] text-ink-muted transition-colors hover:border-ink hover:text-ink"
       >
         Log out
       </button>

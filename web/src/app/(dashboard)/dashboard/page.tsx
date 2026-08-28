@@ -6,6 +6,10 @@ import { createClient } from "@/lib/supabase/client";
 import { fetchUserStats, fetchRepoInsights, fetchUserReportPdf } from "@/lib/api";
 import { ApiError } from "@/lib/api";
 import { GitHubUserStats, ApiResponse, RepoInsights, GHRepoHealth } from "@/types";
+import { ReportCard } from "@/components/ui/ReportCard";
+import { MeasuredValue } from "@/components/ui/MeasuredValue";
+import { HealthBadge } from "@/components/ui/HealthBadge";
+import { SealedPanel } from "@/components/ui/SealedPanel";
 
 // ---------------------------------------------------------------------------
 // Health score helpers
@@ -16,11 +20,11 @@ const HEALTH_METRICS: {
   label: string;
   max: number;
 }[] = [
-  { key: "regularity",  label: "Commit regularity", max: 30 },
-  { key: "recency",     label: "Recently active",   max: 20 },
-  { key: "description", label: "Has description",   max: 20 },
-  { key: "readme",      label: "Has README",        max: 15 },
-  { key: "license",     label: "Has license",       max: 15 },
+  { key: "regularity", label: "Commit regularity", max: 30 },
+  { key: "recency", label: "Recently active", max: 20 },
+  { key: "description", label: "Has description", max: 20 },
+  { key: "readme", label: "Has README", max: 15 },
+  { key: "license", label: "Has license", max: 15 },
 ];
 
 // ---------------------------------------------------------------------------
@@ -123,86 +127,119 @@ export default function DashboardPage() {
   const isPro = result?.tier === "pro";
 
   return (
-    <div className="max-w-3xl mx-auto space-y-6">
-      <div>
-        <h1 className="text-xl font-semibold text-gray-900">Dashboard</h1>
-        <p className="text-sm text-gray-500 mt-1">
-          Enter a GitHub username to explore their activity.
+    <div className="mx-auto max-w-3xl space-y-6">
+      <div className="border-b border-rule pb-4">
+        <h1 className="text-xl font-semibold text-ink">Dashboard</h1>
+        <p className="mt-1 text-sm text-ink-muted">
+          Enter a GitHub username to run a diagnostic.
         </p>
       </div>
 
-      <form onSubmit={handleSearch} className="flex gap-3">
-        <input
-          type="text"
-          placeholder="e.g. torvalds"
-          value={username}
-          onChange={(e) => setUsername(e.target.value)}
-          className="flex-1 rounded-md border border-gray-300 px-3 py-2 text-sm shadow-sm focus:border-indigo-500 focus:outline-none focus:ring-1 focus:ring-indigo-500"
-        />
+      <form onSubmit={handleSearch} className="flex items-end gap-3">
+        <label className="block flex-1">
+          <span className="mb-1.5 block text-[11px] font-semibold uppercase tracking-[0.1em] text-ink-muted">
+            GitHub username
+          </span>
+          <input
+            type="text"
+            placeholder="e.g. torvalds"
+            value={username}
+            onChange={(e) => setUsername(e.target.value)}
+            className="w-full border-0 border-b border-rule bg-transparent px-0 py-2 font-mono text-sm text-ink placeholder:text-ink-muted focus:border-accent"
+          />
+        </label>
         <button
           type="submit"
           disabled={loading}
-          className="rounded-md bg-indigo-600 px-4 py-2 text-sm font-medium text-white hover:bg-indigo-700 disabled:opacity-50 transition-colors"
+          className="shrink-0 bg-accent px-4 py-2 text-sm font-semibold uppercase tracking-[0.08em] text-accent-ink transition-colors hover:bg-accent-strong disabled:opacity-50"
         >
-          {loading ? "Loading…" : "Search"}
+          {loading ? "Running…" : "Run"}
         </button>
       </form>
 
       {error && (
-        <div className="rounded-md bg-red-50 border border-red-200 px-4 py-3 text-sm text-red-700">
+        <div className="border border-accent/40 bg-accent/5 px-4 py-3 text-sm text-accent">
           {error}
         </div>
+      )}
+
+      {!result && !loading && !error && (
+        <ReportCard title="No record yet" meta="Awaiting input">
+          <div className="flex gap-6 opacity-40">
+            <div className="flex h-24 w-24 shrink-0 items-center justify-center rounded-full border border-dashed border-ink-muted">
+              <span className="font-mono text-xs text-ink-muted">—</span>
+            </div>
+            <div className="flex-1 space-y-2.5">
+              {["Commit regularity", "Recently active", "Has description"].map((label) => (
+                <div key={label} className="flex items-center gap-3">
+                  <span className="w-32 shrink-0 text-xs text-ink-muted sm:w-36 sm:text-sm">
+                    {label}
+                  </span>
+                  <div className="h-px flex-1 bg-rule" />
+                </div>
+              ))}
+            </div>
+          </div>
+          <p className="mt-4 text-sm text-ink-muted">
+            Run a diagnostic above to populate this report.
+          </p>
+        </ReportCard>
       )}
 
       {result && (
         <div className="space-y-6">
           {!isPro && (
-            <div className="rounded-md bg-amber-50 border border-amber-200 px-4 py-3 text-sm text-amber-800">
-              You&apos;re on the <strong>Free</strong> plan — showing top 3 repos.{" "}
-              <a href="/billing" className="underline font-medium">Upgrade to Pro</a>{" "}
-              to unlock full stats and repo health scores.
+            <div className="border border-rule bg-surface px-4 py-3 text-sm text-ink-muted">
+              You&apos;re on the <strong className="text-ink">Free</strong> record — showing top 3
+              repos.{" "}
+              <a href="/billing" className="font-medium text-accent hover:underline">
+                Upgrade to Pro
+              </a>{" "}
+              to unlock full diagnostics and repo health verdicts.
             </div>
           )}
 
           <div className="flex items-center justify-between gap-3">
-            <h2 className="text-sm font-semibold text-gray-700">Results for @{result.data.login}</h2>
+            <h2 className="font-mono text-xs uppercase tracking-[0.1em] text-ink-muted">
+              Record — @{result.data.login}
+            </h2>
             {isPro ? (
               <button
                 onClick={handleDownloadReport}
                 disabled={reportLoading}
-                className="rounded-md bg-indigo-600 px-3 py-1.5 text-xs font-medium text-white hover:bg-indigo-700 disabled:opacity-50 transition-colors shrink-0"
+                className="shrink-0 border border-rule px-3 py-1.5 text-xs font-semibold uppercase tracking-[0.08em] text-ink transition-colors hover:border-ink disabled:opacity-50"
               >
-                {reportLoading ? "Generating…" : "Download PDF Report"}
+                {reportLoading ? "Generating…" : "Export — PDF"}
               </button>
             ) : (
               <a
                 href="/billing"
-                className="rounded-md bg-indigo-50 px-3 py-1.5 text-xs font-medium text-indigo-700 hover:bg-indigo-100 transition-colors shrink-0"
+                className="shrink-0 border border-accent px-3 py-1.5 text-xs font-semibold uppercase tracking-[0.08em] text-accent hover:bg-accent/5"
               >
-                Unlock PDF Report — Pro
+                Export — PDF (Pro)
               </a>
             )}
           </div>
 
           {reportError && (
-            <div className="rounded-md bg-red-50 border border-red-200 px-4 py-3 text-sm text-red-700">
+            <div className="border border-accent/40 bg-accent/5 px-4 py-3 text-sm text-accent">
               {reportError}
             </div>
           )}
 
-          <UserCard stats={result.data} />
+          <ProfileSummary stats={result.data} />
 
           {Object.keys(result.data.languages).length > 0 && (
             <LanguageBreakdown languages={result.data.languages} />
           )}
 
           <div>
-            <h2 className="text-sm font-semibold text-gray-700 mb-3">
-              Top Repositories
+            <h2 className="mb-3 font-mono text-xs uppercase tracking-[0.1em] text-ink-muted">
+              Top repositories
             </h2>
             <div className="space-y-3">
               {result.data.topRepos.map((repo) => (
-                <RepoCard
+                <RepoReport
                   key={repo.fullName}
                   repo={repo}
                   insights={repoInsightsMap[repo.fullName] ?? null}
@@ -219,32 +256,39 @@ export default function DashboardPage() {
 }
 
 // ---------------------------------------------------------------------------
-// User card
+// Profile summary — the intake header
 // ---------------------------------------------------------------------------
 
-function UserCard({ stats }: { stats: GitHubUserStats }) {
+function ProfileSummary({ stats }: { stats: GitHubUserStats }) {
   return (
-    <div className="rounded-lg border border-gray-200 bg-white p-5 flex gap-5 items-start">
-      <Image
-        src={stats.avatarUrl}
-        alt={stats.login}
-        width={72}
-        height={72}
-        className="rounded-full shrink-0"
-      />
-      <div className="min-w-0">
-        <p className="font-semibold text-gray-900">{stats.name ?? stats.login}</p>
-        <p className="text-sm text-gray-500">@{stats.login}</p>
-        {stats.bio && (
-          <p className="text-sm text-gray-600 mt-1 line-clamp-2">{stats.bio}</p>
-        )}
-        <div className="flex gap-4 mt-3 text-sm text-gray-500">
-          <span><strong className="text-gray-900">{stats.publicRepos}</strong> repos</span>
-          <span><strong className="text-gray-900">{stats.followers}</strong> followers</span>
-          <span><strong className="text-gray-900">{stats.following}</strong> following</span>
+    <ReportCard title={stats.name ?? stats.login} meta={`@${stats.login}`}>
+      <div className="flex gap-5">
+        <Image
+          src={stats.avatarUrl}
+          alt={stats.login}
+          width={64}
+          height={64}
+          className="shrink-0 border border-rule"
+        />
+        <div className="min-w-0 flex-1">
+          {stats.bio && <p className="text-sm text-ink-muted">{stats.bio}</p>}
+          <dl className="mt-3 flex gap-6 text-sm">
+            <div>
+              <dt className="text-[10px] uppercase tracking-[0.1em] text-ink-muted">Repos</dt>
+              <dd className="font-mono font-semibold tabular-nums text-ink">{stats.publicRepos}</dd>
+            </div>
+            <div>
+              <dt className="text-[10px] uppercase tracking-[0.1em] text-ink-muted">Followers</dt>
+              <dd className="font-mono font-semibold tabular-nums text-ink">{stats.followers}</dd>
+            </div>
+            <div>
+              <dt className="text-[10px] uppercase tracking-[0.1em] text-ink-muted">Following</dt>
+              <dd className="font-mono font-semibold tabular-nums text-ink">{stats.following}</dd>
+            </div>
+          </dl>
         </div>
       </div>
-    </div>
+    </ReportCard>
   );
 }
 
@@ -255,34 +299,34 @@ function UserCard({ stats }: { stats: GitHubUserStats }) {
 function LanguageBreakdown({ languages }: { languages: Record<string, number> }) {
   const sorted = Object.entries(languages).sort(([, a], [, b]) => b - a);
   const total = sorted.reduce((sum, [, n]) => sum + n, 0);
+
   return (
-    <div className="rounded-lg border border-gray-200 bg-white p-5">
-      <h2 className="text-sm font-semibold text-gray-700 mb-3">Languages</h2>
-      <div className="space-y-2">
-        {sorted.slice(0, 8).map(([lang, count]) => (
-          <div key={lang} className="flex items-center gap-3 text-sm">
-            <span className="w-24 text-gray-600 truncate">{lang}</span>
-            <div className="flex-1 bg-gray-100 rounded-full h-2 overflow-hidden">
-              <div
-                className="bg-indigo-500 h-2 rounded-full"
-                style={{ width: `${Math.round((count / total) * 100)}%` }}
-              />
+    <ReportCard title="Languages">
+      <div className="space-y-2.5">
+        {sorted.slice(0, 8).map(([lang, count]) => {
+          const pct = Math.round((count / total) * 100);
+          return (
+            <div key={lang} className="flex items-center gap-3 text-sm">
+              <span className="w-24 shrink-0 truncate text-ink-muted">{lang}</span>
+              <div className="h-2 flex-1 border border-rule">
+                <div className="h-full bg-ink-muted/40" style={{ width: `${pct}%` }} />
+              </div>
+              <span className="w-9 shrink-0 text-right font-mono text-xs tabular-nums text-ink-muted">
+                {pct}%
+              </span>
             </div>
-            <span className="text-gray-400 w-8 text-right">
-              {Math.round((count / total) * 100)}%
-            </span>
-          </div>
-        ))}
+          );
+        })}
       </div>
-    </div>
+    </ReportCard>
   );
 }
 
 // ---------------------------------------------------------------------------
-// Repo card
+// Repo report
 // ---------------------------------------------------------------------------
 
-function RepoCard({
+function RepoReport({
   repo,
   insights,
   isPro,
@@ -294,139 +338,56 @@ function RepoCard({
   insightsLoading: boolean;
 }) {
   return (
-    <div className="rounded-lg border border-gray-200 bg-white p-4">
-      {/* Basic repo info */}
-      <div className="flex items-start justify-between gap-2">
-        <div className="min-w-0">
-          <a
-            href={repo.url}
-            target="_blank"
-            rel="noreferrer"
-            className="text-sm font-medium text-indigo-700 hover:underline"
-          >
-            {repo.name}
-          </a>
-          {repo.description && (
-            <p className="text-sm text-gray-500 mt-0.5 line-clamp-1">{repo.description}</p>
-          )}
-          <div className="flex gap-3 mt-1.5 text-xs text-gray-400">
-            {repo.language && <span>{repo.language}</span>}
-            <span>&#9733; {repo.stars}</span>
-            <span>&#x2442; {repo.forks}</span>
-          </div>
-        </div>
-      </div>
-
-      {/* Health score — Pro feature */}
-      <div className="mt-4 pt-4 border-t border-gray-100">
-        {isPro ? (
-          insightsLoading || !insights
-            ? <HealthSkeleton />
-            : <InlineHealthScore health={insights.healthScore} />
-        ) : (
-          <LockedHealthScore />
-        )}
-      </div>
-    </div>
-  );
-}
-
-// ---------------------------------------------------------------------------
-// Inline health score (Pro users)
-// ---------------------------------------------------------------------------
-
-const RING_RADIUS = 30;
-const RING_CIRCUMFERENCE = 2 * Math.PI * RING_RADIUS;
-
-function InlineHealthScore({ health }: { health: GHRepoHealth }) {
-  const total = Math.round(health.total);
-  const offset = RING_CIRCUMFERENCE * (1 - total / 100);
-
-  return (
-    <div className="flex gap-6 items-center">
-      {/* Score ring */}
-      <div className="shrink-0 flex flex-col items-center gap-1">
-        <div className="relative w-16 h-16">
-          <svg viewBox="0 0 76 76" className="w-full h-full -rotate-90">
-            <circle cx="38" cy="38" r={RING_RADIUS} fill="none" stroke="#e0e7ff" strokeWidth="10" />
-            <circle
-              cx="38" cy="38" r={RING_RADIUS}
-              fill="none"
-              stroke="#6366f1"
-              strokeWidth="10"
-              strokeLinecap="round"
-              strokeDasharray={RING_CIRCUMFERENCE}
-              strokeDashoffset={offset}
-              style={{ transition: "stroke-dashoffset 0.8s ease-out" }}
-            />
-          </svg>
-          <div className="absolute inset-0 flex flex-col items-center justify-center">
-            <span className="text-base font-bold text-gray-900 leading-none">{total}</span>
-            <span className="text-[10px] text-gray-400 mt-0.5">/100</span>
-          </div>
-        </div>
-        <span className="text-[11px] font-medium text-gray-400 tracking-wide uppercase">
-          Health
-        </span>
-      </div>
-
-      {/* Metric bars */}
-      <div className="flex-1 space-y-2.5">
-        {HEALTH_METRICS.map(({ key, label, max }) => {
-          const value = health.breakdown[key];
-          const pct = (value / max) * 100;
-          return (
-            <div key={key} className="flex items-center gap-3">
-              <span className="w-32 shrink-0 text-xs text-gray-500">{label}</span>
-              <div className="flex-1 h-2 bg-indigo-50 rounded-full overflow-hidden">
-                <div
-                  className="h-2 rounded-full bg-indigo-500 transition-all duration-700 ease-out"
-                  style={{ width: `${pct}%` }}
-                />
-              </div>
-              <span className="w-9 shrink-0 text-right text-xs text-gray-400 tabular-nums">
-                {Math.round(value)}/{max}
-              </span>
-            </div>
-          );
-        })}
-      </div>
-    </div>
-  );
-}
-
-// ---------------------------------------------------------------------------
-// Locked health score (free users)
-// ---------------------------------------------------------------------------
-
-function LockedHealthScore() {
-  return (
-    <div className="relative select-none">
-      {/* Blurred placeholder that hints at the shape of the real content */}
-      <div className="blur-sm pointer-events-none opacity-50 flex gap-5 items-start">
-        <div className="w-14 h-14 rounded-full bg-gray-200 shrink-0" />
-        <div className="flex-1 space-y-2 pt-0.5">
-          {[80, 55, 100, 100, 0].map((w, i) => (
-            <div key={i} className="flex items-center gap-2">
-              <div className="w-32 h-2 bg-gray-200 rounded shrink-0" />
-              <div className="flex-1 h-1.5 bg-gray-100 rounded-full overflow-hidden">
-                <div className="h-1.5 rounded-full bg-gray-300" style={{ width: `${w}%` }} />
-              </div>
-            </div>
-          ))}
-        </div>
-      </div>
-
-      {/* Upgrade CTA centred over the blur */}
-      <div className="absolute inset-0 flex items-center justify-center">
-        <a
-          href="/billing"
-          className="rounded-full bg-indigo-600 px-4 py-1.5 text-xs font-medium text-white hover:bg-indigo-700 transition-colors shadow-sm"
-        >
-          Unlock health score — Pro
+    <ReportCard
+      title={
+        <a href={repo.url} target="_blank" rel="noreferrer" className="hover:text-accent hover:underline">
+          {repo.name}
         </a>
+      }
+      meta={repo.language ?? undefined}
+    >
+      <div className="space-y-4">
+        <div>
+          {repo.description && (
+            <p className="text-sm text-ink-muted">{repo.description}</p>
+          )}
+          <div className="mt-2 flex gap-4 font-mono text-xs tabular-nums text-ink-muted">
+            <span>
+              <span className="tracking-[0.08em] text-ink-muted/70">STARS</span> {repo.stars}
+            </span>
+            <span>
+              <span className="tracking-[0.08em] text-ink-muted/70">FORKS</span> {repo.forks}
+            </span>
+          </div>
+        </div>
+
+        <div className="border-t border-rule pt-4">
+          {isPro ? (
+            insightsLoading || !insights ? (
+              <HealthSkeleton />
+            ) : (
+
+              <div className="flex gap-6">
+                <HealthBadge score={insights.healthScore.total} />
+                <div className="flex-1 space-y-2.5">
+                  {HEALTH_METRICS.map(({ key, label, max }) => (
+                    <MeasuredValue
+                      key={key}
+                      label={label}
+                      value={insights.healthScore.breakdown[key]}
+                      max={max}
+                    />
+                  ))}
+                </div>
+              </div>
+
+            )
+          ) : (
+            <SealedPanel />
+          )}
+        </div>
       </div>
-    </div>
+    </ReportCard>
   );
 }
 
@@ -436,13 +397,13 @@ function LockedHealthScore() {
 
 function HealthSkeleton() {
   return (
-    <div className="flex gap-5 items-start animate-pulse">
-      <div className="w-14 h-14 rounded-full bg-gray-100 shrink-0" />
-      <div className="flex-1 space-y-2 pt-0.5">
+    <div className="flex animate-pulse gap-6">
+      <div className="h-20 w-20 shrink-0 rounded-full border border-rule" />
+      <div className="flex-1 space-y-2.5 pt-1">
         {[65, 50, 85, 90, 30].map((w, i) => (
-          <div key={i} className="flex items-center gap-2">
-            <div className="w-32 h-2 bg-gray-100 rounded shrink-0" />
-            <div className="flex-1 h-1.5 bg-gray-100 rounded-full" />
+          <div key={i} className="flex items-center gap-3">
+            <div className="h-2.5 w-32 shrink-0 bg-ink-muted/15" />
+            <div className="h-2.5 flex-1 bg-ink-muted/10" />
           </div>
         ))}
       </div>

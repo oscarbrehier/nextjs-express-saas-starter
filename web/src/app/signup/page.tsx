@@ -4,6 +4,8 @@ import { useState } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { createClient } from "@/lib/supabase/client";
+import { FormField } from "@/components/ui/FormField";
+import { AuthFrame } from "@/components/layout/AuthFrame";
 
 export default function SignUpPage() {
   const router = useRouter();
@@ -34,43 +36,35 @@ export default function SignUpPage() {
   }
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gray-50 px-4">
-      <div className="w-full max-w-sm">
-        <h1 className="text-2xl font-semibold text-gray-900 mb-1">
-          GitHub Insights
-        </h1>
-        <p className="text-sm text-gray-500 mb-8">Create your account</p>
+    <AuthFrame>
+      <div className="border border-rule bg-surface shadow-[0_1px_2px_rgba(0,0,0,0.05)]">
+        <div className="border-b border-rule px-6 py-5">
+          <h1 className="text-lg font-semibold text-ink">GitHub Insights</h1>
+          <p className="mt-0.5 font-mono text-[10px] uppercase tracking-[0.14em] text-ink-muted">
+            Intake — New account
+          </p>
+        </div>
 
-        <form onSubmit={handleSubmit} className="space-y-4">
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">
-              Email
-            </label>
-            <input
-              type="email"
-              required
-              value={email}
-              onChange={(e) => setEmail(e.target.value)}
-              className="w-full rounded-md border border-gray-300 px-3 py-2 text-sm shadow-sm focus:border-indigo-500 focus:outline-none focus:ring-1 focus:ring-indigo-500"
-            />
-          </div>
+        <form onSubmit={handleSubmit} className="space-y-5 px-6 py-6">
+          <FormField
+            label="Email"
+            type="email"
+            required
+            value={email}
+            onChange={(e) => setEmail(e.target.value)}
+          />
 
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">
-              Password
-            </label>
-            <input
-              type="password"
-              required
-              minLength={8}
-              value={password}
-              onChange={(e) => setPassword(e.target.value)}
-              className="w-full rounded-md border border-gray-300 px-3 py-2 text-sm shadow-sm focus:border-indigo-500 focus:outline-none focus:ring-1 focus:ring-indigo-500"
-            />
-          </div>
+          <FormField
+            label="Password"
+            type="password"
+            required
+            minLength={8}
+            value={password}
+            onChange={(e) => setPassword(e.target.value)}
+          />
 
           {error && (
-            <p className="text-sm text-red-600 bg-red-50 border border-red-200 rounded px-3 py-2">
+            <p className="border border-accent/40 bg-accent/5 px-3 py-2 text-sm text-accent">
               {error}
             </p>
           )}
@@ -78,19 +72,21 @@ export default function SignUpPage() {
           <button
             type="submit"
             disabled={loading}
-            className="w-full rounded-md bg-indigo-600 px-4 py-2 text-sm font-medium text-white hover:bg-indigo-700 disabled:opacity-50 transition-colors"
+            className="w-full bg-accent px-4 py-2.5 text-sm font-semibold uppercase tracking-[0.08em] text-accent-ink transition-colors hover:bg-accent-strong disabled:opacity-50"
           >
             {loading ? "Creating account…" : "Create account"}
           </button>
         </form>
 
-        <p className="mt-4 text-center text-sm text-gray-500">
-          Already have an account?{" "}
-          <Link href="/login" className="text-indigo-600 hover:underline">
-            Sign in
-          </Link>
-        </p>
+        <div className="border-t border-rule px-6 py-4 text-center">
+          <p className="text-sm text-ink-muted">
+            Already have an account?{" "}
+            <Link href="/login" className="font-medium text-accent hover:underline">
+              Sign in
+            </Link>
+          </p>
+        </div>
       </div>
-    </div>
+    </AuthFrame>
   );
 }

@@ -4,6 +4,7 @@ import { useState, useEffect } from "react";
 import { createClient } from "@/lib/supabase/client";
 import { createCheckoutSession, createPortalSession } from "@/lib/api";
 import { SubscriptionStatus } from "@/types";
+import { ReportCard } from "@/components/ui/ReportCard";
 
 export default function BillingPage() {
   const [status, setStatus] = useState<SubscriptionStatus>("free");
@@ -68,81 +69,96 @@ export default function BillingPage() {
   const isPro = status === "active";
 
   return (
-    <div className="max-w-xl mx-auto space-y-6">
-      <div>
-        <h1 className="text-xl font-semibold text-gray-900">Billing</h1>
-        <p className="text-sm text-gray-500 mt-1">Manage your subscription.</p>
+    <div className="mx-auto max-w-xl space-y-6">
+      <div className="border-b border-rule pb-4">
+        <h1 className="text-xl font-semibold text-ink">Billing</h1>
+        <p className="mt-1 text-sm text-ink-muted">Manage your subscription.</p>
       </div>
 
       {fetchingStatus ? (
-        <div className="text-sm text-gray-400">Loading…</div>
+        <div className="font-mono text-sm text-ink-muted">Loading…</div>
       ) : (
-        <div className="rounded-lg border border-gray-200 bg-white p-6 space-y-4">
-          <div className="flex items-center justify-between">
-            <div>
-              <p className="font-medium text-gray-900">
-                {isPro ? "Pro Plan" : "Free Plan"}
-              </p>
-              <p className="text-sm text-gray-500 mt-0.5">
-                {isPro
-                  ? "Full access to all insights and repositories."
-                  : "Limited to top 3 repos and basic stats."}
-              </p>
-            </div>
-            <span
-              className={`px-2.5 py-0.5 rounded-full text-xs font-medium ${
-                isPro
-                  ? "bg-indigo-100 text-indigo-700"
-                  : "bg-gray-100 text-gray-600"
-              }`}
-            >
-              {isPro ? "Active" : "Free"}
-            </span>
-          </div>
+        <ReportCard
+          title="Subscription"
+          meta={isPro ? "Active — Pro" : "Active — Free"}
+        >
+          <div className="space-y-5">
+            <p className="text-sm text-ink-muted">
+              {isPro
+                ? "Full access to all insights and repositories."
+                : "Limited to top 3 repos and basic stats."}
+            </p>
 
-          <hr className="border-gray-100" />
-
-          {/* Plan comparison */}
-          <div className="grid grid-cols-2 gap-4 text-sm">
-            <div>
-              <p className="font-medium text-gray-700 mb-2">Free</p>
-              <ul className="space-y-1 text-gray-500">
-                <li>Top 3 repos only</li>
-                <li>Basic user stats</li>
-                <li>Language breakdown</li>
-              </ul>
+            {/* Plan comparison, read as two adjoining panels of the same record */}
+            <div className="grid grid-cols-2 divide-x divide-rule border border-rule text-sm">
+              <PlanPanel
+                name="Free"
+                price="€0/mo"
+                features={["Top 3 repos only", "Basic user stats", "Language breakdown"]}
+                active={!isPro}
+              />
+              <PlanPanel
+                name="Pro"
+                price="€9/mo"
+                features={["Top 10 repos", "Repo insights (commits, contributors)", "All free features"]}
+                active={isPro}
+              />
             </div>
+
             <div>
-              <p className="font-medium text-indigo-700 mb-2">Pro — $9/mo</p>
-              <ul className="space-y-1 text-gray-600">
-                <li>Top 10 repos</li>
-                <li>Repo insights (commits, contributors)</li>
-                <li>All free features</li>
-              </ul>
+              {isPro ? (
+                <button
+                  onClick={handleManage}
+                  disabled={loading}
+                  className="border border-rule px-4 py-2 text-sm font-semibold uppercase tracking-[0.08em] text-ink transition-colors hover:border-ink disabled:opacity-50"
+                >
+                  {loading ? "Loading…" : "Manage subscription"}
+                </button>
+              ) : (
+                <button
+                  onClick={handleUpgrade}
+                  disabled={loading}
+                  className="bg-accent px-4 py-2 text-sm font-semibold uppercase tracking-[0.08em] text-accent-ink transition-colors hover:bg-accent-strong disabled:opacity-50"
+                >
+                  {loading ? "Loading…" : "Upgrade to Pro"}
+                </button>
+              )}
             </div>
           </div>
-
-          <div className="pt-2">
-            {isPro ? (
-              <button
-                onClick={handleManage}
-                disabled={loading}
-                className="rounded-md border border-gray-300 px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50 disabled:opacity-50 transition-colors"
-              >
-                {loading ? "Loading…" : "Manage subscription"}
-              </button>
-            ) : (
-              <button
-                onClick={handleUpgrade}
-                disabled={loading}
-                className="rounded-md bg-indigo-600 px-4 py-2 text-sm font-medium text-white hover:bg-indigo-700 disabled:opacity-50 transition-colors"
-              >
-                {loading ? "Loading…" : "Upgrade to Pro"}
-              </button>
-            )}
-          </div>
-        </div>
+        </ReportCard>
       )}
+    </div>
+  );
+}
+
+function PlanPanel({
+  name,
+  price,
+  features,
+  active,
+}: {
+  name: string;
+  price: string;
+  features: string[];
+  active: boolean;
+}) {
+  return (
+    <div className="p-4">
+      <div className="mb-3 flex items-center justify-between gap-2">
+        <p className="font-semibold text-ink">
+          {name} <span className="font-mono font-normal text-ink-muted">{price}</span>
+        </p>
+        {active && (
+          <span className="shrink-0 border border-accent px-1.5 py-0.5 text-[10px] font-semibold uppercase tracking-[0.1em] text-accent">
+            Active
+          </span>
+        )}
+      </div>
+      <ul className="space-y-1.5 text-ink-muted">
+        {features.map((f) => (
+          <li key={f}>{f}</li>
+        ))}
+      </ul>
     </div>
   );
 }

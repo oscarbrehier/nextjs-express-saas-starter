@@ -1,7 +1,9 @@
 /**
  * Renders the Pro "GitHub Insights Report" as a self-contained HTML string
- * for `generatePdfFromHtml`. Mirrors the styling used on the dashboard
- * (indigo health rings/bars) so the PDF feels like an extension of the app.
+ * for `generatePdfFromHtml`. Mirrors the web app's Lab Report design system
+ * (see /DESIGN.md at the repo root) — paper-and-ink palette, Public Sans +
+ * Courier Prime, hairline brackets, a plain bordered score readout — so the
+ * export reads as the same instrument, not a different product.
  */
 import { GitHubUserStats, GitHubRepo, RepoInsights } from "../types";
 
@@ -10,8 +12,25 @@ export interface ReportRepoSection {
 	insights: RepoInsights | null;
 }
 
-const RADIUS = 40;
-const CIRCUMFERENCE = 2 * Math.PI * RADIUS;
+const HEALTH_METRICS: { key: "regularity" | "recency" | "description" | "readme" | "license"; label: string; max: number }[] = [
+	{ key: "regularity", label: "Commit regularity", max: 30 },
+	{ key: "recency", label: "Recently active", max: 20 },
+	{ key: "description", label: "Has description", max: 20 },
+	{ key: "readme", label: "Has README", max: 15 },
+	{ key: "license", label: "Has license", max: 15 },
+];
+
+const STAGES = [
+	{ min: 85, label: "Mature" },
+	{ min: 65, label: "Established" },
+	{ min: 40, label: "Developing" },
+	{ min: 0, label: "Early stage" },
+];
+
+function stageFor(score: number): string {
+	const rounded = Math.round(Math.max(0, Math.min(100, score)));
+	return (STAGES.find((s) => rounded >= s.min) ?? STAGES[STAGES.length - 1]).label;
+}
 
 function escapeHtml(value: string): string {
 	return value
@@ -22,24 +41,25 @@ function escapeHtml(value: string): string {
 		.replace(/'/g, "&#39;");
 }
 
-function healthRingSvg(total: number): string {
-	const clamped = Math.max(0, Math.min(100, Math.round(total)));
-	const offset = CIRCUMFERENCE * (1 - clamped / 100);
+function healthBadge(total: number): string {
+	const rounded = Math.round(Math.max(0, Math.min(100, total)));
 	return `
-		<svg viewBox="0 0 100 100" width="90" height="90" style="transform: rotate(-90deg);">
-			<circle cx="50" cy="50" r="${RADIUS}" fill="none" stroke="#e0e7ff" stroke-width="10" />
-			<circle cx="50" cy="50" r="${RADIUS}" fill="none" stroke="#6366f1" stroke-width="10"
-				stroke-linecap="round" stroke-dasharray="${CIRCUMFERENCE}" stroke-dashoffset="${offset}" />
-		</svg>
+		<div class="health-badge">
+			<span class="health-score">${rounded}</span>
+			<span class="health-stage">${escapeHtml(stageFor(total))}</span>
+		</div>
 	`;
 }
 
-function metricBar(label: string, value: number, max: number): string {
+function metricRow(label: string, value: number, max: number): string {
 	const pct = Math.max(0, Math.min(100, (value / max) * 100));
 	return `
 		<div class="metric-row">
 			<span class="metric-label">${escapeHtml(label)}</span>
-			<div class="metric-track"><div class="metric-fill" style="width:${pct}%"></div></div>
+			<div class="metric-track">
+				<span class="metric-fill" style="width:${pct}%"></span>
+				<span class="metric-tick" style="left:${pct}%"></span>
+			</div>
 			<span class="metric-value">${Math.round(value)}/${max}</span>
 		</div>
 	`;
@@ -48,44 +68,37 @@ function metricBar(label: string, value: number, max: number): string {
 function renderRepoSection({ repo, insights }: ReportRepoSection): string {
 	const health = insights?.healthScore;
 	return `
-		<section class="repo-card">
-			<div class="repo-header">
-				<div>
-					<h3>${escapeHtml(repo.name)}</h3>
-					${repo.description ? `<p class="repo-desc">${escapeHtml(repo.description)}</p>` : ""}
-					<div class="repo-meta">
-						${repo.language ? `<span>${escapeHtml(repo.language)}</span>` : ""}
-						<span>&#9733; ${repo.stars}</span>
-						<span>&#x2442; ${repo.forks}</span>
-						${insights ? `<span>${insights.openIssues} open issues</span>` : ""}
-					</div>
+		<section class="report-card repo-card">
+			<header class="card-header">
+				<h3>${escapeHtml(repo.name)}</h3>
+				${repo.language ? `<span class="card-meta">${escapeHtml(repo.language)}</span>` : ""}
+			</header>
+			<div class="card-body">
+				${repo.description ? `<p class="repo-desc">${escapeHtml(repo.description)}</p>` : ""}
+				<div class="repo-stats">
+					<span><span class="repo-stats-label">STARS</span> ${repo.stars}</span>
+					<span><span class="repo-stats-label">FORKS</span> ${repo.forks}</span>
+					${insights ? `<span><span class="repo-stats-label">ISSUES</span> ${insights.openIssues}</span>` : ""}
 				</div>
 				${health ? `
-					<div class="health-ring">
-						${healthRingSvg(health.total)}
-						<div class="health-score">${Math.round(health.total)}<span>/100</span></div>
+					<div class="metrics-panel">
+						${healthBadge(health.total)}
+						<div class="metrics">
+							${HEALTH_METRICS.map((m) => metricRow(m.label, health.breakdown[m.key], m.max)).join("")}
+						</div>
+					</div>
+				` : `<p class="unavailable">Repository insights unavailable for this repo.</p>`}
+				${insights && insights.contributors.length > 0 ? `
+					<div class="contributors">
+						<h4>Top contributors</h4>
+						<ul>
+							${insights.contributors.slice(0, 5).map((c) => `
+								<li><img src="${escapeHtml(c.avatarUrl)}" width="18" height="18" /> ${escapeHtml(c.login)} &mdash; ${c.contributions} commits</li>
+							`).join("")}
+						</ul>
 					</div>
 				` : ""}
 			</div>
-			${health ? `
-				<div class="metrics">
-					${metricBar("Commit regularity", health.breakdown.regularity, 30)}
-					${metricBar("Recently active", health.breakdown.recency, 20)}
-					${metricBar("Has description", health.breakdown.description, 20)}
-					${metricBar("Has README", health.breakdown.readme, 15)}
-					${metricBar("Has license", health.breakdown.license, 15)}
-				</div>
-			` : `<p class="unavailable">Repository insights unavailable for this repo.</p>`}
-			${insights && insights.contributors.length > 0 ? `
-				<div class="contributors">
-					<h4>Top contributors</h4>
-					<ul>
-						${insights.contributors.slice(0, 5).map((c) => `
-							<li><img src="${escapeHtml(c.avatarUrl)}" width="20" height="20" /> ${escapeHtml(c.login)} &mdash; ${c.contributions} commits</li>
-						`).join("")}
-					</ul>
-				</div>
-			` : ""}
 		</section>
 	`;
 }
@@ -103,88 +116,119 @@ export function renderUserReportHtml(
 <html>
 <head>
 <meta charset="utf-8" />
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=Public+Sans:wght@400;600;700&family=Courier+Prime:wght@400;700&display=swap" rel="stylesheet" />
 <style>
 	* { box-sizing: border-box; }
-	body { font-family: -apple-system, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; color: #1f2937; margin: 0; }
-	header { display: flex; justify-content: space-between; align-items: baseline; border-bottom: 2px solid #6366f1; padding-bottom: 12px; margin-bottom: 24px; }
-	header h1 { font-size: 20px; margin: 0; color: #111827; }
-	header .meta { font-size: 11px; color: #9ca3af; }
-	.user-card { display: flex; gap: 16px; align-items: flex-start; margin-bottom: 28px; }
-	.user-card img { border-radius: 50%; }
-	.user-card h2 { margin: 0; font-size: 18px; }
-	.user-card .handle { color: #6b7280; font-size: 13px; margin: 2px 0 8px; }
-	.user-card .bio { font-size: 13px; color: #4b5563; margin: 0 0 8px; }
-	.user-stats span { margin-right: 16px; font-size: 12px; color: #6b7280; }
-	.user-stats strong { color: #111827; }
-	.block { margin-bottom: 28px; }
-	.section-title { font-size: 13px; text-transform: uppercase; letter-spacing: 0.04em; color: #6b7280; margin: 0 0 12px; }
-	.lang-row { display: flex; align-items: center; gap: 8px; font-size: 12px; margin-bottom: 6px; }
-	.lang-name { width: 110px; flex-shrink: 0; color: #374151; }
-	.lang-track { flex: 1; height: 6px; background: #eef2ff; border-radius: 4px; overflow: hidden; }
-	.lang-fill { height: 6px; background: #6366f1; }
-	.repo-card { border: 1px solid #e5e7eb; border-radius: 8px; padding: 16px; margin-bottom: 16px; page-break-inside: avoid; }
-	.repo-header { display: flex; justify-content: space-between; gap: 16px; }
-	.repo-header h3 { margin: 0 0 4px; font-size: 14px; color: #4338ca; }
-	.repo-desc { font-size: 12px; color: #6b7280; margin: 0 0 6px; }
-	.repo-meta span { font-size: 11px; color: #9ca3af; margin-right: 10px; }
-	.health-ring { position: relative; width: 90px; height: 90px; flex-shrink: 0; text-align: center; }
-	.health-score { position: absolute; inset: 0; display: flex; flex-direction: column; align-items: center; justify-content: center; font-size: 16px; font-weight: 700; color: #111827; }
-	.health-score span { display: block; font-size: 9px; font-weight: 400; color: #9ca3af; }
-	.metrics { margin-top: 14px; }
-	.metric-row { display: flex; align-items: center; gap: 8px; font-size: 11px; margin-bottom: 5px; }
-	.metric-label { width: 120px; flex-shrink: 0; color: #6b7280; }
-	.metric-track { flex: 1; height: 5px; background: #eef2ff; border-radius: 4px; overflow: hidden; }
-	.metric-fill { height: 5px; background: #6366f1; }
-	.metric-value { width: 34px; text-align: right; color: #9ca3af; }
-	.unavailable { margin-top: 10px; font-size: 11px; color: #9ca3af; font-style: italic; }
-	.contributors { margin-top: 12px; }
-	.contributors h4 { font-size: 11px; text-transform: uppercase; color: #9ca3af; margin: 0 0 6px; }
-	.contributors ul { list-style: none; margin: 0; padding: 0; display: flex; flex-wrap: wrap; gap: 10px; }
-	.contributors li { display: flex; align-items: center; gap: 6px; font-size: 11px; color: #4b5563; }
-	.contributors img { border-radius: 50%; }
-	footer { margin-top: 24px; font-size: 10px; color: #d1d5db; text-align: center; }
+	body {
+		font-family: "Public Sans", ui-sans-serif, system-ui, sans-serif;
+		color: #14181b;
+		background: #f5f6f2;
+		margin: 0;
+		padding: 8px;
+	}
+	.font-mono { font-family: "Courier Prime", ui-monospace, monospace; font-variant-numeric: tabular-nums; }
+
+	header.masthead { display: flex; justify-content: space-between; align-items: baseline; border-bottom: 1px solid #d9dcd6; padding-bottom: 12px; margin-bottom: 24px; }
+	header.masthead h1 { font-size: 18px; font-weight: 600; margin: 0; color: #14181b; }
+	header.masthead .tagline { font-size: 10px; font-weight: 600; letter-spacing: 0.14em; text-transform: uppercase; color: #5b6469; margin-top: 2px; }
+	header.masthead .meta { font-size: 11px; color: #5b6469; }
+
+	.report-card { background: #ffffff; border: 1px solid #d9dcd6; border-radius: 3px; margin-bottom: 16px; page-break-inside: avoid; }
+	.card-header { display: flex; justify-content: space-between; align-items: baseline; gap: 16px; border-bottom: 1px solid #d9dcd6; padding: 12px 18px; }
+	.card-header h2, .card-header h3 { margin: 0; font-size: 14px; font-weight: 600; color: #14181b; }
+	.card-meta { font-size: 11px; color: #5b6469; }
+	.card-body { padding: 16px 18px; }
+
+	.user-card-body { display: flex; gap: 16px; align-items: flex-start; }
+	.user-card-body img { border: 1px solid #d9dcd6; }
+	.user-bio { font-size: 12px; color: #5b6469; margin: 0 0 10px; }
+	.user-stats { display: flex; gap: 20px; }
+	.user-stat dt { font-size: 10px; text-transform: uppercase; letter-spacing: 0.1em; color: #5b6469; margin: 0 0 2px; }
+	.user-stat dd { font-size: 13px; font-weight: 600; color: #14181b; margin: 0; }
+
+	.section-title { font-size: 11px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.1em; color: #5b6469; margin: 0 0 12px; }
+	.lang-row { display: flex; align-items: center; gap: 10px; font-size: 12px; margin-bottom: 8px; }
+	.lang-name { width: 100px; flex-shrink: 0; color: #5b6469; }
+	.lang-track { flex: 1; height: 6px; border: 1px solid #d9dcd6; }
+	.lang-fill { display: block; height: 100%; background: rgba(91,100,105,0.4); }
+	.lang-pct { width: 32px; text-align: right; color: #5b6469; }
+
+	.repo-desc { font-size: 12px; color: #5b6469; margin: 0 0 8px; }
+	.repo-stats { display: flex; gap: 16px; font-size: 11px; color: #5b6469; margin-bottom: 14px; }
+	.repo-stats-label { letter-spacing: 0.08em; color: rgba(91,100,105,0.7); }
+
+	.metrics-panel { display: flex; gap: 20px; border-top: 1px solid #d9dcd6; padding-top: 14px; }
+	.health-badge { flex-shrink: 0; width: 68px; height: 68px; border: 1px solid #d9dcd6; display: flex; flex-direction: column; align-items: center; justify-content: center; }
+	.health-score { font-size: 20px; font-weight: 700; line-height: 1; color: #14181b; }
+	.health-stage { font-size: 9px; font-weight: 600; letter-spacing: 0.06em; text-transform: uppercase; color: #5b6469; margin-top: 3px; }
+	.metrics { flex: 1; }
+	.metric-row { display: flex; align-items: center; gap: 10px; font-size: 11px; margin-bottom: 7px; }
+	.metric-label { width: 110px; flex-shrink: 0; color: #5b6469; }
+	.metric-track { position: relative; flex: 1; height: 4px; border-left: 1px solid #d9dcd6; border-right: 1px solid #d9dcd6; }
+	.metric-track::before { content: ""; position: absolute; left: 0; right: 0; top: 50%; height: 1px; background: #d9dcd6; }
+	.metric-fill { position: absolute; top: 50%; left: 0; height: 3px; margin-top: -1.5px; background: rgba(20,24,27,0.35); }
+	.metric-tick { position: absolute; top: 0; bottom: 0; width: 1px; background: #14181b; }
+	.metric-value { width: 32px; text-align: right; color: #14181b; }
+
+	.unavailable { margin-top: 10px; font-size: 11px; color: #5b6469; font-style: italic; }
+	.contributors { margin-top: 14px; border-top: 1px solid #d9dcd6; padding-top: 12px; }
+	.contributors h4 { font-size: 10px; text-transform: uppercase; letter-spacing: 0.1em; color: #5b6469; margin: 0 0 8px; }
+	.contributors ul { list-style: none; margin: 0; padding: 0; display: flex; flex-wrap: wrap; gap: 12px; }
+	.contributors li { display: flex; align-items: center; gap: 6px; font-size: 11px; color: #5b6469; }
+	.contributors img { border: 1px solid #d9dcd6; }
+
+	footer.report-footer { margin-top: 20px; font-size: 10px; letter-spacing: 0.06em; text-transform: uppercase; color: #5b6469; text-align: center; }
 </style>
 </head>
 <body>
-	<header>
-		<h1>GitHub Insights Report</h1>
-		<span class="meta">Generated ${generatedAt}</span>
+	<header class="masthead">
+		<div>
+			<h1>GitHub Insights</h1>
+			<div class="tagline">Diagnostic Report</div>
+		</div>
+		<span class="meta font-mono">Generated ${generatedAt}</span>
 	</header>
 
-	<div class="user-card">
-		<img src="${escapeHtml(stats.avatarUrl)}" width="72" height="72" />
-		<div>
+	<section class="report-card">
+		<header class="card-header">
 			<h2>${escapeHtml(stats.name ?? stats.login)}</h2>
-			<p class="handle">@${escapeHtml(stats.login)}</p>
-			${stats.bio ? `<p class="bio">${escapeHtml(stats.bio)}</p>` : ""}
-			<div class="user-stats">
-				<span><strong>${stats.publicRepos}</strong> repos</span>
-				<span><strong>${stats.followers}</strong> followers</span>
-				<span><strong>${stats.following}</strong> following</span>
-				<span>Joined ${joinedAt}</span>
+			<span class="card-meta font-mono">@${escapeHtml(stats.login)}</span>
+		</header>
+		<div class="card-body user-card-body">
+			<img src="${escapeHtml(stats.avatarUrl)}" width="64" height="64" />
+			<div>
+				${stats.bio ? `<p class="user-bio">${escapeHtml(stats.bio)}</p>` : ""}
+				<dl class="user-stats">
+					<div class="user-stat"><dt>Repos</dt><dd class="font-mono">${stats.publicRepos}</dd></div>
+					<div class="user-stat"><dt>Followers</dt><dd class="font-mono">${stats.followers}</dd></div>
+					<div class="user-stat"><dt>Following</dt><dd class="font-mono">${stats.following}</dd></div>
+					<div class="user-stat"><dt>Joined</dt><dd class="font-mono">${joinedAt}</dd></div>
+				</dl>
 			</div>
 		</div>
-	</div>
+	</section>
 
 	${languageEntries.length > 0 ? `
-		<div class="block">
-			<h3 class="section-title">Languages</h3>
-			${languageEntries.map(([lang, count]) => `
-				<div class="lang-row">
-					<span class="lang-name">${escapeHtml(lang)}</span>
-					<div class="lang-track"><div class="lang-fill" style="width:${(count / languageTotal) * 100}%"></div></div>
-					<span>${Math.round((count / languageTotal) * 100)}%</span>
-				</div>
-			`).join("")}
-		</div>
+		<section class="report-card">
+			<header class="card-header"><h2>Languages</h2></header>
+			<div class="card-body">
+				${languageEntries.map(([lang, count]) => `
+					<div class="lang-row">
+						<span class="lang-name">${escapeHtml(lang)}</span>
+						<div class="lang-track"><span class="lang-fill" style="width:${(count / languageTotal) * 100}%"></span></div>
+						<span class="lang-pct font-mono">${Math.round((count / languageTotal) * 100)}%</span>
+					</div>
+				`).join("")}
+			</div>
+		</section>
 	` : ""}
 
-	<div class="block">
-		<h3 class="section-title">Top Repositories</h3>
-		${repoSections.map(renderRepoSection).join("")}
-	</div>
+	<h3 class="section-title">Top Repositories</h3>
+	${repoSections.map(renderRepoSection).join("")}
 
-	<footer>GitHub Insights &mdash; Pro report for @${escapeHtml(stats.login)}</footer>
+	<footer class="report-footer">GitHub Insights &mdash; Pro report for @${escapeHtml(stats.login)}</footer>
 </body>
 </html>`;
 }
