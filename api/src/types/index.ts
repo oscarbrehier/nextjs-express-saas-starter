@@ -52,6 +52,17 @@ export interface GitHubRepo {
   updatedAt: string;
 }
 
+export interface GHRepoHealth {
+  total: number;
+  breakdown: {
+    recency: number;
+    regularity: number;
+    description: number;
+    readme: number;
+    license: number;
+  };
+};
+
 /** Normalized repo insights returned by our service. */
 export interface RepoInsights {
   fullName: string;
@@ -64,6 +75,7 @@ export interface RepoInsights {
   /** Recent commit activity (last N weeks). */
   weeklyCommits: number[];
   contributors: RepoContributor[];
+  healthScore: GHRepoHealth;
 }
 
 export interface RepoContributor {

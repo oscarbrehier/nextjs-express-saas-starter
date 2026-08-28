@@ -13,139 +13,203 @@
  */
 import { createHttpError } from "../middleware/errorHandler";
 import {
-  GitHubUserStats,
-  GitHubRepo,
-  RepoInsights,
-  RepoContributor,
+	GitHubUserStats,
+	GitHubRepo,
+	RepoInsights,
+	RepoContributor,
+	GHRepoHealth,
 } from "../types";
+import { generatePdfFromHtml } from "../utils/generatePdf";
+import { renderUserReportHtml, ReportRepoSection } from "../utils/reportTemplate";
 
 const GITHUB_API = "https://api.github.com";
 
 const defaultHeaders: Record<string, string> = {
-  Accept: "application/vnd.github+json",
-  "X-GitHub-Api-Version": "2022-11-28",
+	Accept: "application/vnd.github+json",
+	"X-GitHub-Api-Version": "2022-11-28",
 };
 
 if (process.env.GITHUB_TOKEN) {
-  defaultHeaders["Authorization"] = `Bearer ${process.env.GITHUB_TOKEN}`;
+	defaultHeaders["Authorization"] = `Bearer ${process.env.GITHUB_TOKEN}`;
 }
 
 /** Low-level fetch wrapper with error normalisation. */
 async function ghFetch<T>(path: string): Promise<T> {
-  const url = `${GITHUB_API}${path}`;
-  const res = await fetch(url, { headers: defaultHeaders });
+	const url = `${GITHUB_API}${path}`;
+	const res = await fetch(url, { headers: defaultHeaders });
 
-  if (!res.ok) {
-    // Detect rate-limit exhaustion.
-    if (
-      res.status === 403 &&
-      res.headers.get("X-RateLimit-Remaining") === "0"
-    ) {
-      const reset = res.headers.get("X-RateLimit-Reset");
-      const resetDate = reset
-        ? new Date(parseInt(reset, 10) * 1000).toISOString()
-        : "unknown";
-      throw createHttpError(
-        429,
-        `GitHub rate limit exceeded. Resets at ${resetDate}.`,
-        "GITHUB_RATE_LIMIT"
-      );
-    }
+	if (!res.ok) {
+		// Detect rate-limit exhaustion.
+		if (
+			res.status === 403 &&
+			res.headers.get("X-RateLimit-Remaining") === "0"
+		) {
+			const reset = res.headers.get("X-RateLimit-Reset");
+			const resetDate = reset
+				? new Date(parseInt(reset, 10) * 1000).toISOString()
+				: "unknown";
+			throw createHttpError(
+				429,
+				`GitHub rate limit exceeded. Resets at ${resetDate}.`,
+				"GITHUB_RATE_LIMIT"
+			);
+		}
 
-    if (res.status === 404) {
-      throw createHttpError(404, `GitHub resource not found: ${path}`, "GITHUB_NOT_FOUND");
-    }
+		if (res.status === 404) {
+			throw createHttpError(404, `GitHub resource not found: ${path}`, "GITHUB_NOT_FOUND");
+		}
 
-    const body = await res.text();
-    throw createHttpError(
-      502,
-      `GitHub API error (${res.status}): ${body.slice(0, 200)}`,
-      "GITHUB_API_ERROR"
-    );
-  }
+		const body = await res.text();
+		throw createHttpError(
+			502,
+			`GitHub API error (${res.status}): ${body.slice(0, 200)}`,
+			"GITHUB_API_ERROR"
+		);
+	}
 
-  return res.json() as Promise<T>;
+	return res.json() as Promise<T>;
 }
 
 // --------------------------------------------------------------------------
 // User stats
 // --------------------------------------------------------------------------
 
+function computeRepoHealthScore(repoData: GHRepo, weeklyCommits: number[], hasReadme: boolean): GHRepoHealth {
+
+	const descriptionScore = repoData.description !== null ? 20 : 0;
+	const readmeScore = hasReadme ? 15 : 0;
+	const licenseScore = repoData.license !== null ? 15 : 0;
+
+	const lastPush = (Date.now() - new Date(repoData.pushed_at).getTime()) / 1000 / 60 / 60 / 24;
+	const recencyScore = Math.max(0, Math.min(20, 20 * (1 - (lastPush - 7) / (365 - 7))));
+
+	const activeWeeks = weeklyCommits.filter(w => w > 0).length;
+	const regularityScore = Math.max(0, Math.min(30, 30 * (activeWeeks / weeklyCommits.length))) || 0;
+
+	let score = 0;
+
+	score += descriptionScore;
+	score += readmeScore;
+	score += licenseScore;
+	score += regularityScore;
+	score += recencyScore;
+
+	return {
+		total: score,
+		breakdown: {
+			recency: recencyScore,
+			regularity: regularityScore,
+			description: descriptionScore,
+			readme: readmeScore,
+			license: licenseScore
+		}
+	};
+
+};
+
 export async function getUserStats(
-  username: string,
-  isPro: boolean
+	username: string,
+	isPro: boolean
 ): Promise<GitHubUserStats> {
-  // Fetch user profile and their repos in parallel.
-  const [user, repos] = await Promise.all([
-    ghFetch<GHUser>(`/users/${username}`),
-    ghFetch<GHRepo[]>(`/users/${username}/repos?per_page=100&sort=updated`),
-  ]);
+	// Fetch user profile and their repos in parallel.
+	const [user, repos] = await Promise.all([
+		ghFetch<GHUser>(`/users/${username}`),
+		ghFetch<GHRepo[]>(`/users/${username}/repos?per_page=100&sort=updated`),
+	]);
 
-  // Free tier: only the top 3 repos; Pro: top 10.
-  const repoLimit = isPro ? 10 : 3;
-  const sortedRepos = [...repos]
-    .sort((a, b) => b.stargazers_count - a.stargazers_count)
-    .slice(0, repoLimit);
+	// Free tier: only the top 3 repos; Pro: top 10.
+	const repoLimit = isPro ? 10 : 3;
+	const sortedRepos = [...repos]
+		.sort((a, b) => b.stargazers_count - a.stargazers_count)
+		.slice(0, repoLimit);
 
-  // Build language breakdown from repo primary languages.
-  const languages = repos.reduce<Record<string, number>>((acc, repo) => {
-    if (repo.language) {
-      acc[repo.language] = (acc[repo.language] ?? 0) + 1;
-    }
-    return acc;
-  }, {});
+	// Build language breakdown from repo primary languages.
+	const languages = repos.reduce<Record<string, number>>((acc, repo) => {
+		if (repo.language) {
+			acc[repo.language] = (acc[repo.language] ?? 0) + 1;
+		}
+		return acc;
+	}, {});
 
-  return {
-    login: user.login,
-    name: user.name,
-    avatarUrl: user.avatar_url,
-    bio: user.bio,
-    publicRepos: user.public_repos,
-    followers: user.followers,
-    following: user.following,
-    createdAt: user.created_at,
-    topRepos: sortedRepos.map(normaliseRepo),
-    languages,
-  };
+	return {
+		login: user.login,
+		name: user.name,
+		avatarUrl: user.avatar_url,
+		bio: user.bio,
+		publicRepos: user.public_repos,
+		followers: user.followers,
+		following: user.following,
+		createdAt: user.created_at,
+		topRepos: sortedRepos.map(normaliseRepo),
+		languages,
+	};
 }
+
+
+// --------------------------------------------------------------------------
+// User Report
+// --------------------------------------------------------------------------
+
+export async function getUserReport(username: string): Promise<Buffer> {
+	// Full (Pro-tier) stats: top 10 repos with the language breakdown.
+	const stats = await getUserStats(username, true);
+
+	const repoSections: ReportRepoSection[] = await Promise.all(
+		stats.topRepos.map(async (repo) => {
+			const [owner, name] = repo.fullName.split("/");
+			// A single repo's insights failing (e.g. stats still computing)
+			// shouldn't block the whole report — fall back to the basics.
+			const insights = await getRepoInsights(owner, name).catch(() => null);
+			return { repo, insights };
+		})
+	);
+
+	const html = renderUserReportHtml(stats, repoSections);
+	return generatePdfFromHtml(html);
+};
 
 // --------------------------------------------------------------------------
 // Repo insights
 // --------------------------------------------------------------------------
 
 export async function getRepoInsights(
-  owner: string,
-  repo: string
+	owner: string,
+	repo: string
 ): Promise<RepoInsights> {
-  // Fire all repo-level requests in parallel to keep latency low.
-  const [repoData, languages, activity, contributors] = await Promise.all([
-    ghFetch<GHRepo>(`/repos/${owner}/${repo}`),
-    ghFetch<Record<string, number>>(`/repos/${owner}/${repo}/languages`),
-    ghFetch<GHWeeklyActivity[]>(
-      `/repos/${owner}/${repo}/stats/participation`
-    ).catch(() => null), // stats endpoints occasionally return 202 (computing); handle gracefully
-    ghFetch<GHContributor[]>(
-      `/repos/${owner}/${repo}/contributors?per_page=10`
-    ).catch(() => [] as GHContributor[]),
-  ]);
+	// Fire all repo-level requests in parallel to keep latency low.
+	const [repoData, languages, activity, contributors, hasReadme] = await Promise.all([
+		ghFetch<GHRepo>(`/repos/${owner}/${repo}`),
+		ghFetch<Record<string, number>>(`/repos/${owner}/${repo}/languages`),
+		ghFetch<GHParticipation>(
+			`/repos/${owner}/${repo}/stats/participation`
+		).catch(() => null), // stats endpoints occasionally return 202 (computing); handle gracefully
+		ghFetch<GHContributor[]>(
+			`/repos/${owner}/${repo}/contributors?per_page=10`
+		).catch(() => [] as GHContributor[]),
+		ghFetch(`/repos/${owner}/${repo}/readme`).then(() => true).catch(() => false)
+	]);
 
-  const weeklyCommits = activity ? activity.map((w) => w.total) : [];
+	// activity.all = commits by everyone per week (52 entries)
+	const weeklyCommits = activity ? activity.all : [];
 
-  return {
-    fullName: repoData.full_name,
-    description: repoData.description,
-    stars: repoData.stargazers_count,
-    forks: repoData.forks_count,
-    openIssues: repoData.open_issues_count,
-    defaultBranch: repoData.default_branch,
-    languages,
-    weeklyCommits,
-    contributors: (contributors as GHContributor[]).map((c) => ({
-      login: c.login,
-      avatarUrl: c.avatar_url,
-      contributions: c.contributions,
-    })) as RepoContributor[],
-  };
+	const healthScore = computeRepoHealthScore(repoData, weeklyCommits, hasReadme);
+
+	return {
+		fullName: repoData.full_name,
+		description: repoData.description,
+		stars: repoData.stargazers_count,
+		forks: repoData.forks_count,
+		openIssues: repoData.open_issues_count,
+		defaultBranch: repoData.default_branch,
+		languages,
+		weeklyCommits,
+		contributors: (contributors as GHContributor[]).map((c) => ({
+			login: c.login,
+			avatarUrl: c.avatar_url,
+			contributions: c.contributions,
+		})) as RepoContributor[],
+		healthScore
+	};
 }
 
 // --------------------------------------------------------------------------
@@ -153,50 +217,57 @@ export async function getRepoInsights(
 // --------------------------------------------------------------------------
 
 interface GHUser {
-  login: string;
-  name: string | null;
-  avatar_url: string;
-  bio: string | null;
-  public_repos: number;
-  followers: number;
-  following: number;
-  created_at: string;
+	login: string;
+	name: string | null;
+	avatar_url: string;
+	bio: string | null;
+	public_repos: number;
+	followers: number;
+	following: number;
+	created_at: string;
 }
 
 interface GHRepo {
-  name: string;
-  full_name: string;
-  description: string | null;
-  stargazers_count: number;
-  forks_count: number;
-  open_issues_count: number;
-  language: string | null;
-  html_url: string;
-  updated_at: string;
-  default_branch: string;
+	name: string;
+	full_name: string;
+	description: string | null;
+	stargazers_count: number;
+	forks_count: number;
+	open_issues_count: number;
+	language: string | null;
+	html_url: string;
+	has_issues: boolean;
+	pushed_at: string;
+	updated_at: string;
+	default_branch: string;
+	license: {
+		key: string;
+	} | null;
 }
 
-interface GHWeeklyActivity {
-  total: number; // total commits that week
-  owner: number;
-  all: number[];
+
+// The participation endpoint returns one object, not an array.
+// `all` = total commits per week by everyone; `owner` = by the repo owner only.
+interface GHParticipation {
+	all: number[];
+	owner: number[];
 }
 
 interface GHContributor {
-  login: string;
-  avatar_url: string;
-  contributions: number;
+	login: string;
+	avatar_url: string;
+	contributions: number;
 }
 
 function normaliseRepo(r: GHRepo): GitHubRepo {
-  return {
-    name: r.name,
-    fullName: r.full_name,
-    description: r.description,
-    stars: r.stargazers_count,
-    forks: r.forks_count,
-    language: r.language,
-    url: r.html_url,
-    updatedAt: r.updated_at,
-  };
+	return {
+		name: r.name,
+		fullName: r.full_name,
+		description: r.description,
+		stars: r.stargazers_count,
+		forks: r.forks_count,
+		language: r.language,
+		url: r.html_url,
+		updatedAt: r.updated_at,
+	};
 }

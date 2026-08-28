@@ -24,6 +24,17 @@ export interface GitHubRepo {
   updatedAt: string;
 }
 
+export interface GHRepoHealth {
+  total: number;
+  breakdown: {
+    recency: number;
+    regularity: number;
+    description: number;
+    readme: number;
+    license: number;
+  };
+}
+
 export interface RepoInsights {
   fullName: string;
   description: string | null;
@@ -34,6 +45,7 @@ export interface RepoInsights {
   languages: Record<string, number>;
   weeklyCommits: number[];
   contributors: RepoContributor[];
+  healthScore: GHRepoHealth;
 }
 
 export interface RepoContributor {
