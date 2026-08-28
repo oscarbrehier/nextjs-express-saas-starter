@@ -142,7 +142,7 @@ Browser
 ### 2 — Stripe
 
 1. In the [Stripe Dashboard](https://dashboard.stripe.com), make sure you are in **Test mode**.
-2. Create a product with a **$9/month** recurring price. Copy the price ID → `STRIPE_PRO_PRICE_ID`.
+2. Create a product with a **9€/month** recurring price. Copy the price ID → `STRIPE_PRO_PRICE_ID`.
 3. Copy your **Secret key** → `STRIPE_SECRET_KEY`.
 4. Install the [Stripe CLI](https://stripe.com/docs/stripe-cli) and run:
    ```bash
