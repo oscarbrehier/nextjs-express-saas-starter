@@ -38,7 +38,6 @@ export async function getUserStats(
  * GET /api/repos/:owner/:repo/insights
  *
  * Returns detailed insights for a single repository.
- * Requires a Pro subscription (enforced here to return the tier hint).
  */
 export async function getRepoInsights(
 	req: AuthedRequest,
@@ -49,7 +48,7 @@ export async function getRepoInsights(
 		const { owner, repo } = req.params;
 		const isPro = await getSubscriptionStatus(req.user.sub);
 		const insights = await githubService.getRepoInsights(owner, repo);
-		res.json({ data: insights, tier: isPro ? "pro" : "free" });
+		res.json({ data: insights, tier: isPro ? "pro" });
 	} catch (err) {
 		next(err);
 	}

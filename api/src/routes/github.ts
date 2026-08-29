@@ -23,6 +23,7 @@ router.get(
 router.get(
   "/repos/:owner/:repo/insights",
   requireParams("owner", "repo"),
+  requirePro as RequestHandler,
   githubController.getRepoInsights as RequestHandler
 );
 
