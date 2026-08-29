@@ -6,7 +6,7 @@ import { createHttpError } from "../middleware/errorHandler";
 
 const PRO_PRICE_ID = process.env.STRIPE_PRO_PRICE_ID;
 const WEBHOOK_SECRET = process.env.STRIPE_WEBHOOK_SECRET;
-const FRONTEND_URL = process.env.FRONTEND_URL ?? "http://localhost:3000";
+const FRONTEND_URL = process.env.FRONTEND_URL || "http://localhost:3000";
 
 /**
  * POST /api/stripe/checkout
