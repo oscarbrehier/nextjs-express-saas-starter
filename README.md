@@ -38,17 +38,17 @@ Browser
 
 ### Auth flow (the centrepiece)
 
-1. User logs in via Supabase on the Next.js side → Supabase issues an HS256 JWT.
+1. User logs in via Supabase on the Next.js side → Supabase issues an ES256 JWT.
 2. Next.js stores the JWT in a cookie (managed by `@supabase/ssr`).
 3. Client components extract the `access_token` from the session and send it to Express as `Authorization: Bearer <token>`.
-4. Express middleware (`api/src/middleware/auth.ts`) verifies the JWT signature using `SUPABASE_JWT_SECRET` and attaches the decoded payload to `req.user`.
+4. Express middleware (`api/src/middleware/auth.ts`) verifies the JWT signature against Supabase's public keys — fetched and cached from the project's JWKS endpoint (`/auth/v1/.well-known/jwks.json`) — and attaches the decoded payload to `req.user`.
 5. Downstream controllers use `req.user.sub` (the user's UUID) to look up their `profiles` row and determine their subscription tier.
 
 ### Tier gating
 
 - **Free**: `getUserStats` returns top 3 repos.
 - **Pro**: top 10 repos + repo-level insights (commit activity, contributors).
-- The `requirePro` middleware can be applied to any Express route to hard-block free users.
+- The `requirePro` middleware is applied to every Pro-only Express route (repo insights, PDF export) to hard-block free users server-side.
 - The frontend receives a `tier: "free" | "pro"` field in every API response and renders an upgrade prompt accordingly.
 
 ---
@@ -120,10 +120,10 @@ Browser
 
 ### Prerequisites
 
-- Node.js 20+
+- Node.js 22.12+ (the API depends on `jose` and `puppeteer`, both ESM-only packages required from CommonJS via Node's `require(esm)` support)
 - A [Supabase](https://supabase.com) project
 - A [Stripe](https://stripe.com) account (test mode)
-- A [GitHub Personal Access Token](https://github.com/settings/tokens) (classic, no special scopes needed for public repos)
+- Optional: a [GitHub Personal Access Token](https://github.com/settings/tokens) (classic, no special scopes needed for public repos) — raises the GitHub API rate limit from 60 to 5 000 req/hr
 
 ---
 
@@ -135,7 +135,8 @@ Browser
    - `Project URL` → `SUPABASE_URL` / `NEXT_PUBLIC_SUPABASE_URL`
    - `anon public` key → `NEXT_PUBLIC_SUPABASE_ANON_KEY`
    - `service_role` key → `SUPABASE_SERVICE_ROLE_KEY`
-4. In **Project Settings → API → JWT Settings**, copy the **JWT Secret** → `SUPABASE_JWT_SECRET`
+
+No JWT secret to copy — the API verifies tokens against Supabase's public JWKS endpoint, not a shared secret.
 
 ---
 
@@ -169,8 +170,7 @@ npm run dev                 # starts on http://localhost:4000
 | `NODE_ENV` | `development` or `production` |
 | `SUPABASE_URL` | Your Supabase project URL |
 | `SUPABASE_SERVICE_ROLE_KEY` | Supabase service-role key (server-only) |
-| `SUPABASE_JWT_SECRET` | Supabase JWT secret (from Project Settings → API) |
-| `GITHUB_TOKEN` | GitHub PAT — increases rate limit to 5 000 req/hr |
+| `GITHUB_TOKEN` | Optional GitHub PAT — increases rate limit to 5 000 req/hr |
 | `STRIPE_SECRET_KEY` | Stripe secret key (test mode) |
 | `STRIPE_WEBHOOK_SECRET` | Stripe webhook signing secret |
 | `STRIPE_PRO_PRICE_ID` | Stripe price ID for the Pro plan |
