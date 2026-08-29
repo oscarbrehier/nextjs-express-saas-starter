@@ -23,10 +23,6 @@ create policy "Users can view their own profile"
   on public.profiles for select
   using (auth.uid() = id);
 
-create policy "Users can update their own profile"
-  on public.profiles for update
-  using (auth.uid() = id);
-
 -- Automatically create a profile row when a new auth user is created.
 create or replace function public.handle_new_user()
 returns trigger
