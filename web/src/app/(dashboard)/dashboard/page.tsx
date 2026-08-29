@@ -15,12 +15,14 @@ import { SealedPanel } from "@/components/ui/SealedPanel";
 // Health score helpers
 // ---------------------------------------------------------------------------
 
+// Mirrors api/src/constants/health.ts HEALTH_METRIC_WEIGHTS — keep in sync,
+// these are the maxes the backend actually scores against.
 const HEALTH_METRICS: {
 	key: keyof GHRepoHealth["breakdown"];
 	label: string;
 	max: number;
 }[] = [
-		{ key: "regularity", label: "Commit regularity", max: 30 },
+		{ key: "regularity", label: "Commit regularity", max: 20 },
 		{ key: "recency", label: "Recently active", max: 20 },
 		{ key: "description", label: "Has description", max: 20 },
 		{ key: "readme", label: "Has README", max: 15 },

@@ -21,6 +21,7 @@ import {
 } from "../types";
 import { generatePdfFromHtml } from "../utils/generatePdf";
 import { renderUserReportHtml, ReportRepoSection } from "../utils/reportTemplate";
+import { HEALTH_METRIC_WEIGHTS } from "../constants/health";
 
 const GITHUB_API = "https://api.github.com";
 
@@ -74,14 +75,6 @@ async function ghFetch<T>(path: string): Promise<T> {
 // User stats
 // --------------------------------------------------------------------------
 
-export const HEALTH_METRIC_WEIGHTS = {
-	regularity: 20,
-	recency: 20,
-	description: 20,
-	readme: 15,
-	license: 15
-} as const;
-
 function computeRepoHealthScore(repoData: GHRepo, weeklyCommits: number[], hasReadme: boolean): GHRepoHealth {
 
 	const descriptionScore = repoData.description ? HEALTH_METRIC_WEIGHTS.description : 0;
@@ -109,8 +102,7 @@ function computeRepoHealthScore(repoData: GHRepo, weeklyCommits: number[], hasRe
 	const total = Object.values(breakdown).reduce((sum, val) => sum + val, 0);
 
 	return { total, breakdown };
-
-};
+}
 
 export async function getUserStats(
 	username: string,
@@ -171,7 +163,7 @@ export async function getUserReport(username: string): Promise<Buffer> {
 
 	const html = renderUserReportHtml(stats, repoSections);
 	return generatePdfFromHtml(html);
-};
+}
 
 // --------------------------------------------------------------------------
 // Repo insights
@@ -208,11 +200,11 @@ export async function getRepoInsights(
 		defaultBranch: repoData.default_branch,
 		languages,
 		weeklyCommits,
-		contributors: (contributors as GHContributor[]).map((c) => ({
+		contributors: contributors.map((c) => ({
 			login: c.login,
 			avatarUrl: c.avatar_url,
 			contributions: c.contributions,
-		})) as RepoContributor[],
+		})),
 		healthScore
 	};
 }

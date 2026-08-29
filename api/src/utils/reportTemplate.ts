@@ -6,6 +6,7 @@
  * export reads as the same instrument, not a different product.
  */
 import { GitHubUserStats, GitHubRepo, RepoInsights } from "../types";
+import { HEALTH_METRIC_WEIGHTS } from "../constants/health";
 
 export interface ReportRepoSection {
 	repo: GitHubRepo;
@@ -13,11 +14,11 @@ export interface ReportRepoSection {
 }
 
 const HEALTH_METRICS: { key: "regularity" | "recency" | "description" | "readme" | "license"; label: string; max: number }[] = [
-	{ key: "regularity", label: "Commit regularity", max: 30 },
-	{ key: "recency", label: "Recently active", max: 20 },
-	{ key: "description", label: "Has description", max: 20 },
-	{ key: "readme", label: "Has README", max: 15 },
-	{ key: "license", label: "Has license", max: 15 },
+	{ key: "regularity", label: "Commit regularity", max: HEALTH_METRIC_WEIGHTS.regularity },
+	{ key: "recency", label: "Recently active", max: HEALTH_METRIC_WEIGHTS.recency },
+	{ key: "description", label: "Has description", max: HEALTH_METRIC_WEIGHTS.description },
+	{ key: "readme", label: "Has README", max: HEALTH_METRIC_WEIGHTS.readme },
+	{ key: "license", label: "Has license", max: HEALTH_METRIC_WEIGHTS.license },
 ];
 
 const STAGES = [
