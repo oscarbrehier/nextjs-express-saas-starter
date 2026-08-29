@@ -261,15 +261,34 @@ export default function DashboardPage() {
 
 function ProfileSummary({ stats }: { stats: GitHubUserStats }) {
 	return (
-		<ReportCard title={stats.name ?? stats.login} meta={`@${stats.login}`}>
+		<ReportCard
+			title={stats.name ?? stats.login}
+			meta={
+				<a
+					href={`https://github.com/${stats.login}`}
+					target="_blank"
+					rel="noreferrer"
+					className="hover:text-accent hover:underline"
+				>
+					@{stats.login}
+				</a>
+			}
+		>
 			<div className="flex gap-5">
-				<Image
-					src={stats.avatarUrl}
-					alt={stats.login}
-					width={64}
-					height={64}
-					className="shrink-0 border border-rule"
-				/>
+				<a
+					href={`https://github.com/${stats.login}`}
+					target="_blank"
+					rel="noreferrer"
+					className="shrink-0"
+				>
+					<Image
+						src={stats.avatarUrl}
+						alt={stats.login}
+						width={64}
+						height={64}
+						className="border border-rule transition-opacity hover:opacity-80"
+					/>
+				</a>
 				<div className="min-w-0 flex-1">
 					{stats.bio && <p className="text-sm text-ink-muted">{stats.bio}</p>}
 					<dl className="mt-3 flex gap-6 text-sm">
