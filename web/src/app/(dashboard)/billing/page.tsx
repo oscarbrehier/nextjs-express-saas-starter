@@ -3,7 +3,7 @@
 import { useState, useEffect } from "react";
 import { createClient } from "@/lib/supabase/client";
 import { createCheckoutSession, createPortalSession } from "@/lib/api";
-import { SubscriptionStatus } from "@/types";
+import { SubscriptionStatus, isSubscriptionStatus } from "@/types";
 import { ReportCard } from "@/components/ui/ReportCard";
 
 export default function BillingPage() {
@@ -25,7 +25,9 @@ export default function BillingPage() {
         .eq("id", user.id)
         .single();
 
-      if (data) setStatus(data.subscription_status as SubscriptionStatus);
+      if (data && isSubscriptionStatus(data.subscription_status)) {
+        setStatus(data.subscription_status);
+      }
       setFetchingStatus(false);
     }
 

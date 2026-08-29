@@ -5,13 +5,12 @@
  * user is on the free tier. Attach this after `requireAuth` on routes that are
  * Pro-only.
  */
-import { Response, NextFunction } from "express";
+import { Request, Response, NextFunction } from "express";
 import { supabaseAdmin } from "../services/supabase";
-import { AuthedRequest } from "../types";
 import { createHttpError } from "./errorHandler";
 
 export async function requirePro(
-  req: AuthedRequest,
+  req: Request,
   res: Response,
   next: NextFunction
 ): Promise<void> {

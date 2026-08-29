@@ -28,6 +28,5 @@ export async function generatePdfFromHtml(html: string): Promise<Buffer> {
 
 	} finally {
 		await browser.close();
-	};
-
-};
+	}
+}

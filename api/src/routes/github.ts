@@ -3,19 +3,17 @@ import { requireAuth } from "../middleware/auth";
 import { requirePro } from "../middleware/requirePro";
 import { requireParams } from "../middleware/requireParams";
 import * as githubController from "../controllers/github";
-import { AuthedRequest } from "../types";
-import { RequestHandler } from "express";
 
 const router = Router();
 
 // All GitHub routes require authentication.
-router.use(requireAuth as RequestHandler);
+router.use(requireAuth);
 
 // GET /api/github/:username/stats
 router.get(
   "/:username/stats",
   requireParams("username"),
-  githubController.getUserStats as RequestHandler
+  githubController.getUserStats
 );
 
 // GET /api/repos/:owner/:repo/insights  (note: mounted at /api/github in app.ts)
@@ -23,16 +21,16 @@ router.get(
 router.get(
   "/repos/:owner/:repo/insights",
   requireParams("owner", "repo"),
-  requirePro as RequestHandler,
-  githubController.getRepoInsights as RequestHandler
+  requirePro,
+  githubController.getRepoInsights
 );
 
 // GET /api/github/:username/report — Pro-only PDF report.
 router.get(
   "/:username/report",
   requireParams("username"),
-  requirePro as RequestHandler,
-  githubController.getUserReport as RequestHandler
+  requirePro,
+  githubController.getUserReport
 );
 
 export default router;

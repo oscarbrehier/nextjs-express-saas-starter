@@ -56,6 +56,12 @@ export interface RepoContributor {
 
 export type SubscriptionStatus = "free" | "active" | "past_due" | "canceled";
 
+const SUBSCRIPTION_STATUSES: readonly SubscriptionStatus[] = ["free", "active", "past_due", "canceled"];
+
+export function isSubscriptionStatus(value: unknown): value is SubscriptionStatus {
+  return typeof value === "string" && (SUBSCRIPTION_STATUSES as readonly string[]).includes(value);
+}
+
 export interface Profile {
   id: string;
   email: string;

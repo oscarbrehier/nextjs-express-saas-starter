@@ -1,5 +1,3 @@
-import { Request } from "express";
-
 /** Supabase JWT payload decoded by our auth middleware. */
 export interface SupabaseJwtPayload {
   sub: string;        // user UUID
@@ -8,11 +6,6 @@ export interface SupabaseJwtPayload {
   aud: string;
   exp: number;
   iat: number;
-}
-
-/** Extended Express Request that carries the verified Supabase user. */
-export interface AuthedRequest extends Request {
-  user: SupabaseJwtPayload;
 }
 
 /** Row shape of our `profiles` table in Supabase. */
@@ -61,7 +54,7 @@ export interface GHRepoHealth {
     readme: number;
     license: number;
   };
-};
+}
 
 /** Normalized repo insights returned by our service. */
 export interface RepoInsights {

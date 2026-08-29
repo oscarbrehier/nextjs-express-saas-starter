@@ -1,5 +1,5 @@
 import { Request, Response, NextFunction } from "express";
-import { AuthedRequest } from "../types";
+import Stripe from "stripe";
 import { stripe } from "../services/stripe";
 import { supabaseAdmin } from "../services/supabase";
 import { createHttpError } from "../middleware/errorHandler";
@@ -15,7 +15,7 @@ const FRONTEND_URL = process.env.FRONTEND_URL ?? "http://localhost:3000";
  * The frontend redirects the user to that URL.
  */
 export async function createCheckoutSession(
-  req: AuthedRequest,
+  req: Request,
   res: Response,
   next: NextFunction
 ): Promise<void> {
@@ -31,7 +31,7 @@ export async function createCheckoutSession(
       .eq("id", req.user.sub)
       .single();
 
-    let customerId = profile?.stripe_customer_id as string | undefined;
+    let customerId = profile?.stripe_customer_id ?? undefined;
 
     if (!customerId) {
       const customer = await stripe.customers.create({
@@ -73,7 +73,7 @@ export async function createCheckoutSession(
  * subscription (cancel, update payment method, etc.).
  */
 export async function createPortalSession(
-  req: AuthedRequest,
+  req: Request,
   res: Response,
   next: NextFunction
 ): Promise<void> {
@@ -137,16 +137,12 @@ export async function handleWebhook(
       throw createHttpError(400, "Webhook signature verification failed");
     }
 
-    const subscription = event.data.object as {
-      status: string;
-      metadata: { supabase_user_id?: string };
-    };
-
-    const userId = subscription.metadata?.supabase_user_id;
-
     switch (event.type) {
       case "customer.subscription.created":
       case "customer.subscription.updated": {
+        // Safe to assert: these two event types always carry a Subscription object.
+        const subscription = event.data.object as Stripe.Subscription;
+        const userId = subscription.metadata?.supabase_user_id;
         if (userId) {
           const newStatus =
             subscription.status === "active" ? "active" : subscription.status;
@@ -158,6 +154,8 @@ export async function handleWebhook(
         break;
       }
       case "customer.subscription.deleted": {
+        const subscription = event.data.object as Stripe.Subscription;
+        const userId = subscription.metadata?.supabase_user_id;
         if (userId) {
           await supabaseAdmin
             .from("profiles")

@@ -1,5 +1,4 @@
-import { Response, NextFunction } from "express";
-import { AuthedRequest } from "../types";
+import { Request, Response, NextFunction } from "express";
 import { supabaseAdmin } from "../services/supabase";
 import * as githubService from "../services/github";
 
@@ -20,7 +19,7 @@ async function getSubscriptionStatus(userId: string): Promise<boolean> {
  * truncated view (fewer repos, no language breakdown detail).
  */
 export async function getUserStats(
-	req: AuthedRequest,
+	req: Request<{ username: string }>,
 	res: Response,
 	next: NextFunction
 ): Promise<void> {
@@ -37,18 +36,18 @@ export async function getUserStats(
 /**
  * GET /api/repos/:owner/:repo/insights
  *
- * Returns detailed insights for a single repository.
+ * Returns detailed insights for a single repository. Pro-only; the
+ * `requirePro` middleware rejects free-tier callers before this runs.
  */
 export async function getRepoInsights(
-	req: AuthedRequest,
+	req: Request<{ owner: string; repo: string }>,
 	res: Response,
 	next: NextFunction
 ): Promise<void> {
 	try {
 		const { owner, repo } = req.params;
-		const isPro = await getSubscriptionStatus(req.user.sub);
 		const insights = await githubService.getRepoInsights(owner, repo);
-		res.json({ data: insights, tier: isPro ? "pro" });
+		res.json({ data: insights, tier: "pro" });
 	} catch (err) {
 		next(err);
 	}
@@ -61,7 +60,7 @@ export async function getRepoInsights(
  * `requirePro` middleware rejects free-tier callers before this runs.
  */
 export async function getUserReport(
-	req: AuthedRequest,
+	req: Request<{ username: string }>,
 	res: Response,
 	next: NextFunction
 ): Promise<void> {
@@ -80,5 +79,5 @@ export async function getUserReport(
 		res.send(pdf);
 	} catch (err) {
 		next(err);
-	};
-};
+	}
+}

@@ -9,16 +9,15 @@
  * Verifying the signature ourselves using cached public keys avoids an async 
  * network API round-trip to Supabase on every incoming request.
  */
-import { Response, NextFunction } from "express";
-import { AuthedRequest, SupabaseJwtPayload } from "../types";
+import { Request, Response, NextFunction } from "express";
+import { SupabaseJwtPayload } from "../types";
 import { createHttpError } from "../middleware/errorHandler";
-import { createRemoteJWKSet, jwtVerify } from "jose";
-import { JOSEError, JWTExpired } from "jose/errors";
+import { createRemoteJWKSet, jwtVerify, errors } from "jose";
 
 const SUPABASE_URL = process.env.SUPABASE_URL;
 if (!SUPABASE_URL) {
 	throw new Error("SUPABASE_URL is not set. Add it to your .env file.");
-};;
+}
 
 // The JWKS endpoint exposes the project's public signing key(s).
 // jose fetches and caches these keys automatically.
@@ -28,7 +27,7 @@ const JWKS = createRemoteJWKSet(
 
 
 export async function requireAuth(
-	req: AuthedRequest,
+	req: Request,
 	res: Response,
 	next: NextFunction
 ): Promise<void> {
@@ -56,9 +55,9 @@ export async function requireAuth(
 		next();
 
 	} catch (err) {
-		if (err instanceof JWTExpired) {
+		if (err instanceof errors.JWTExpired) {
 			next(createHttpError(401, "Token has expired"));
-		} else if (err instanceof JOSEError) {
+		} else if (err instanceof errors.JOSEError) {
 			next(createHttpError(401, "Invalid token"));
 		} else {
 			next(err);
