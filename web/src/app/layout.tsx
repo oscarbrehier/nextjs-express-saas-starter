@@ -36,10 +36,10 @@ const THEME_INIT = `
 
 const DIRECTION_CONTRACT = `
 THESIS: The dashboard is read, not skimmed — every GitHub profile renders as a lab report, refusing the generic indigo SaaS card-grid this category always ships.
-OWN-WORLD: clinical paper ground, near-black ink, Public Sans for labels, Courier Prime tabular figures for every measured value, one flag-red stamp ink, hairline reference-range brackets.
-STORY: a reviewer reads a profile's vitals, sees each repo's health measured against real ranges, and trusts the verdict because the instrument's ink never changes.
-FIRST VIEWPORT: a patient-style intake header (avatar, identity, plain figures) atop a stacked list of repo report cards, each opening on a stamped score and a bracketed metric panel.
-FORM: The Lab Report, IMPECCABLE'S PICK, seed key 0197f2bd.
+OWN-WORLD: clinical paper ground, near-black ink, Public Sans for labels, Courier Prime tabular figures for every measured value, hairline reference-range brackets, one accent ink rationed to actions — never to grading a reading.
+STORY: a reviewer reads a profile's vitals and sees each repo's health measured against real ranges, reported plainly rather than judged.
+FIRST VIEWPORT: a patient-style intake header (avatar, identity, plain figures) atop a stacked list of repo report cards, each opening on a bordered score readout and a bracketed metric panel.
+FORM: The Lab Report, IMPECCABLE'S PICK, seed key 0197f2bd. Revised via live steering post-finish: the verdict stamp and color-graded readings were replaced with a plain, ungraded readout (see DESIGN.md's "All-Rectilinear" and "Ungraded Reading" rules).
 FINISH: unreviewed and undocumented is unfinished; this build ends with the finish review, the verdict, DESIGN.md, and every shipping raster carrying its provenance.
 `;
 
@@ -60,10 +60,7 @@ export default function RootLayout({
           dangerouslySetInnerHTML={{ __html: `<!--${DIRECTION_CONTRACT}-->` }}
         />
         {children}
-      {/* impeccable-live-start */}
-<script src="http://localhost:8400/live.js?token=a6819c99-b5c7-4685-ab4a-61b15f9d9e3c"></script>
-{/* impeccable-live-end */}
-</body>
+      </body>
     </html>
   );
 }

@@ -74,36 +74,41 @@ async function ghFetch<T>(path: string): Promise<T> {
 // User stats
 // --------------------------------------------------------------------------
 
+export const HEALTH_METRIC_WEIGHTS = {
+	regularity: 20,
+	recency: 20,
+	description: 20,
+	readme: 15,
+	license: 15
+} as const;
+
 function computeRepoHealthScore(repoData: GHRepo, weeklyCommits: number[], hasReadme: boolean): GHRepoHealth {
 
-	const descriptionScore = repoData.description !== null ? 20 : 0;
-	const readmeScore = hasReadme ? 15 : 0;
-	const licenseScore = repoData.license !== null ? 15 : 0;
+	const descriptionScore = repoData.description ? HEALTH_METRIC_WEIGHTS.description : 0;
+	const readmeScore = hasReadme ? HEALTH_METRIC_WEIGHTS.readme : 0;
+	const licenseScore = repoData.license ? HEALTH_METRIC_WEIGHTS.license : 0;
 
-	const lastPush = (Date.now() - new Date(repoData.pushed_at).getTime()) / 1000 / 60 / 60 / 24;
-	const recencyScore = Math.max(0, Math.min(20, 20 * (1 - (lastPush - 7) / (365 - 7))));
+	// Recency score
+	const daysSincePush = (Date.now() - new Date(repoData.pushed_at).getTime()) / (1000 * 60 * 60 * 24);
+	const recencyRatio = 1 - (daysSincePush - 7) / (365 - 7);
+	const recencyScore = Math.max(0, Math.min(HEALTH_METRIC_WEIGHTS.recency, HEALTH_METRIC_WEIGHTS.recency * recencyRatio));
 
-	const activeWeeks = weeklyCommits.filter(w => w > 0).length;
-	const regularityScore = Math.max(0, Math.min(30, 30 * (activeWeeks / weeklyCommits.length))) || 0;
+	// Regularity score (guarded against empty array)
+	const activeWeeks = weeklyCommits.filter((w) => w > 0).length;
+	const activeRatio = weeklyCommits.length > 0 ? activeWeeks / weeklyCommits.length : 0;
+	const regularityScore = Math.max(0, Math.min(HEALTH_METRIC_WEIGHTS.regularity, HEALTH_METRIC_WEIGHTS.regularity * activeRatio));
 
-	let score = 0;
-
-	score += descriptionScore;
-	score += readmeScore;
-	score += licenseScore;
-	score += regularityScore;
-	score += recencyScore;
-
-	return {
-		total: score,
-		breakdown: {
-			recency: recencyScore,
-			regularity: regularityScore,
-			description: descriptionScore,
-			readme: readmeScore,
-			license: licenseScore
-		}
+	const breakdown = {
+		recency: recencyScore,
+		regularity: regularityScore,
+		description: descriptionScore,
+		readme: readmeScore,
+		license: licenseScore,
 	};
+
+	const total = Object.values(breakdown).reduce((sum, val) => sum + val, 0);
+
+	return { total, breakdown };
 
 };
 

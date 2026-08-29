@@ -1,12 +1,13 @@
 /**
  * Supabase JWT verification middleware.
  *
- * Supabase issues HS256 JWTs signed with the project's JWT secret. We verify
- * the token using that secret and attach the decoded payload to `req.user`.
+ * Supabase issues ES256 JWTs signed with the project's private key. We verify
+ * the token's cryptographic signature using Supabase's public keys retrieved via JWKS.
+ * Validated user metadata is attached to `req.user`.
  *
- * Why not use the Supabase client here?  The admin client can decode tokens,
- * but verifying the signature cryptographically ourselves is more explicit and
- * avoids an async network round-trip per request.
+ * Why verify locally instead of using the Supabase client?
+ * Verifying the signature ourselves using cached public keys avoids an async 
+ * network API round-trip to Supabase on every incoming request.
  */
 import { Response, NextFunction } from "express";
 import { AuthedRequest, SupabaseJwtPayload } from "../types";
@@ -17,13 +18,7 @@ import { JOSEError, JWTExpired } from "jose/errors";
 const SUPABASE_URL = process.env.SUPABASE_URL;
 if (!SUPABASE_URL) {
 	throw new Error("SUPABASE_URL is not set. Add it to your .env file.");
-};
-
-const SUPABASE_JWT_SECRET = process.env.SUPABASE_JWT_SECRET;
-if (!SUPABASE_JWT_SECRET) {
-	// Fail loud at startup, not silently at request time.
-	throw new Error("SUPABASE_JWT_SECRET is not set. Add it to your .env file.");
-};
+};;
 
 // The JWKS endpoint exposes the project's public signing key(s).
 // jose fetches and caches these keys automatically.
